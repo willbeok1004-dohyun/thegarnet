@@ -528,3 +528,33 @@ a.nbr:hover{border-color:var(--garnet-m);box-shadow:var(--sh)}
 .pt .ac .kpis.k3{margin-bottom:18px}
 @media (max-width:960px){.ag2c{grid-template-columns:1fr}.kpis.k4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .adm>*{min-width:0}.adm-body{min-width:0}
+
+/* ---- 관리자 운영 기능 확장 ---- */
+.kpis.k7{grid-template-columns:repeat(7,minmax(0,1fr))}
+a.kpi{color:inherit;text-decoration:none;transition:border-color .15s,box-shadow .15s}
+a.kpi:hover{border-color:var(--garnet-m);box-shadow:0 2px 10px rgba(80,20,30,.06)}
+a.kpi:focus-visible{outline:2px solid var(--garnet-m);outline-offset:2px}
+.blk{display:block;color:var(--soft);font-size:12px;margin-top:2px;font-weight:400}
+.tbl tr.old td{opacity:.55}
+.inl{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}
+.inl select{width:auto;min-width:96px;padding-top:6px;padding-bottom:6px;font-size:13px}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer}
+.chk input{width:auto;margin:0;accent-color:var(--garnet)}
+.cks{display:flex;flex-wrap:wrap;gap:8px 18px}
+.fa.top{margin:0 0 16px}
+.lnk-i{color:var(--garnet);text-decoration:underline;text-underline-offset:3px}
+.nt-f textarea{font-size:14px}
+code.sel{user-select:all;font-size:1.05rem;background:var(--sand);padding:2px 8px;border-radius:6px;letter-spacing:.04em}
+.schl{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.schl li{display:flex;gap:10px;align-items:flex-start}
+.schl li>svg{flex:none;color:var(--garnet);margin-top:2px}
+.schl small{display:block;color:var(--soft);font-size:12.5px;margin-top:2px}
+.adm-user em{font-style:normal;margin-left:4px}
+.tp{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.mb{margin-bottom:18px}
+@media (max-width:1100px){.kpis.k7{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:640px){.kpis.k7{grid-template-columns:repeat(2,minmax(0,1fr))}.inl{flex-wrap:wrap}}
+
+.adm-h{font-size:11.5px;letter-spacing:.06em;color:rgba(250,247,241,.5);padding:16px 12px 6px;margin:0}
+.adm-foot .adm-h{padding-top:0}
+@media (max-width:960px){.adm-h{display:none}}

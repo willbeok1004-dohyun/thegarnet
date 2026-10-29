@@ -210,7 +210,7 @@
     var v = el.dataset.v; document.getElementById('faqBox').innerHTML = G.faqList(S.faqs.filter(function (f) { return f.show && (v === '전체' || f.cat === v); }));
   };
   P.notices = function () {
-    var l = S.notices.slice().sort(function (a, b) { return (b.pinned - a.pinned) || (b.date > a.date ? 1 : -1); });
+    var l = S.notices.filter(function (n) { return !n.hidden; }).sort(function (a, b) { return (b.pinned - a.pinned) || (b.date > a.date ? 1 : -1); });
     return { title: '공지사항', html: G.pageHead('공지사항', '더가넷의 소식과 운영 안내를 전해 드려요.', [['고객센터', 'faq'], ['공지사항']], 'NOTICE') + '<section class="sec sec-tight"><div class="wrap narrow2">' + tabs('notices') + '<ul class="nl">' + l.map(function (n) { return '<li><a href="#notice-' + n.id + '">' + (n.pinned ? '<span class="bd bd-bad">공지</span>' : '') + '<span class="nt">' + esc(n.title) + '</span><time>' + n.date + '</time></a></li>'; }).join('') + '</ul></div></section>' };
   };
   P.notice = function (id) {

@@ -103,7 +103,7 @@
       '<p>안녕하세요, 더가넷을 준비하는 도현입니다.<br>누군가의 마음과 생활을 서둘러 판단하지 않고, 작지만 필요한 도움을 건네는 브랜드를 만들고 싶습니다.</p><p>꽃과 공간, 일상과 반려동물, 함께 걷는 시간과 나눔. 어떤 도움을 고르든 당신의 선택을 존중하고, 비용과 책임을 분명히 안내하는 것. 더가넷이 지키고 싶은 마음입니다.</p><p class="sign"><b>도현</b><span>더가넷 기획 · 운영</span></p></div></div></section>' +
 
       '<section class="sec"><div class="wrap faq-sec"><div><p class="kick">BEFORE WE BEGIN</p><h2 class="h2">궁금하실 이야기</h2><p class="sec-p">서비스 준비 상태부터 이용 방식, 비용과 책임, 필요한 정보까지 안내합니다.</p><a class="btn btn-line" href="#faq">질문 모두 보기</a>' +
-      '<div class="news"><h3>소식</h3><ul>' + S.notices.slice().sort(function (a, b) { return b.date > a.date ? 1 : -1; }).slice(0, 3).map(function (n) { return '<li><a href="#notice-' + n.id + '"><span>' + esc(n.title) + '</span><time>' + n.date + '</time></a></li>'; }).join('') + '</ul></div></div>' +
+      '<div class="news"><h3>소식</h3><ul>' + S.notices.filter(function (n) { return !n.hidden; }).sort(function (a, b) { return b.date > a.date ? 1 : -1; }).slice(0, 3).map(function (n) { return '<li><a href="#notice-' + n.id + '"><span>' + esc(n.title) + '</span><time>' + n.date + '</time></a></li>'; }).join('') + '</ul></div></div>' +
       G.faqList(S.faqs.filter(function (f) { return f.show; }).slice(0, 6)) + '</div></section>';
     return { title: '', html: html, cls: 'home' };
   };

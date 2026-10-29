@@ -43,14 +43,18 @@
   };
 
   /* 관리자 레이아웃 */
-  var ADM = [['admin', '대시보드', 'home'], ['admin-apps', '신청 관리', 'list'], ['admin-svcs', '서비스 관리', 'grid'], ['admin-partners', '협력업체', 'handshake'], ['admin-members', '회원', 'users'], ['admin-club', '이웃 나눔 검증', 'swap'], ['admin-settle', '정산 관리', 'receipt'],
-    ['admin-notices', '공지·FAQ', 'bell'], ['admin-inq', '1:1 문의', 'message'], ['admin-stats', '통계·정산', 'chart'], ['admin-audit', '감사 로그', 'shield']];
+  /* 메뉴 그룹: ['#h', 제목]은 구분 제목 */
+  var ADM = [['admin', '대시보드', 'home'],
+    ['#h', '운영'], ['admin-apps', '서비스 신청 관리', 'list'], ['admin-members', '회원 관리', 'users'], ['admin-inq', '상담·문의 관리', 'message'], ['admin-partners', '협력업체 관리', 'handshake'], ['admin-club', '이웃 나눔 검증', 'swap'], ['admin-settle', '정산 관리', 'receipt'],
+    ['#h', '콘텐츠'], ['admin-notices', '공지사항·FAQ', 'bell'], ['admin-svcs', '서비스 관리', 'grid'],
+    ['#h', '분석·시스템'], ['admin-stats', '통계·보고서', 'chart'], ['admin-accounts', '관리자 계정·권한', 'lock'], ['admin-audit', '감사 로그', 'shield']];
   G.adminLayout = function (out, r) {
-    var cur = r.raw.indexOf('admin-app-') === 0 ? 'admin-apps' : r.raw.indexOf('admin-club') === 0 ? 'admin-club' : r.raw.indexOf('admin-settle') === 0 ? 'admin-settle' : r.raw;
-    var nav = ADM.map(function (n) { return '<a href="#' + n[0] + '" class="' + (cur === n[0] ? 'on' : '') + '">' + ico(n[2], 18) + '<span>' + n[1] + '</span>' + (n[0] === 'admin-club' && G.clubTodoCount && G.clubTodoCount() ? '<i class="dot-n">' + G.clubTodoCount() + '</i>' : '') + (n[0] === 'admin-settle' && G.settleTodoCount && G.settleTodoCount() ? '<i class="dot-n">' + G.settleTodoCount() + '</i>' : '') + '</a>'; }).join('');
+    var PFX = [['admin-app-', 'admin-apps'], ['admin-club', 'admin-club'], ['admin-settle', 'admin-settle'], ['admin-member-', 'admin-members'], ['admin-partner-', 'admin-partners'], ['admin-notice-', 'admin-notices'], ['admin-faq-', 'admin-notices'], ['admin-svc-', 'admin-svcs']];
+    var cur = r.raw; PFX.some(function (p) { if (r.raw.indexOf(p[0]) === 0) { cur = p[1]; return true; } return false; });
+    var nav = ADM.map(function (n) { if (n[0] === '#h') return '<p class="adm-h">' + n[1] + '</p>'; return '<a href="#' + n[0] + '" class="' + (cur === n[0] ? 'on' : '') + '">' + ico(n[2], 18) + '<span>' + n[1] + '</span>' + (n[0] === 'admin-club' && G.clubTodoCount && G.clubTodoCount() ? '<i class="dot-n">' + G.clubTodoCount() + '</i>' : '') + (n[0] === 'admin-settle' && G.settleTodoCount && G.settleTodoCount() ? '<i class="dot-n">' + G.settleTodoCount() + '</i>' : '') + '</a>'; }).join('');
     var pend = S.apps.filter(function (a) { return a.status === 'SUBMITTED'; }).length;
     return '<div class="adm"><aside class="adm-side"><a class="adm-logo" href="#admin"><span class="logo-m">THE GARNET<i>.</i></span><small>운영 관리</small></a>' +
-      '<nav aria-label="관리자 메뉴">' + nav + '</nav><div class="adm-foot"><a href="#home">' + ico('eye', 16) + ' 고객 화면 보기</a><button data-act="adminOut">' + ico('logout', 16) + ' 로그아웃</button></div></aside>' +
+      '<nav aria-label="관리자 메뉴">' + nav + '</nav><div class="adm-foot"><p class="adm-h">바로가기</p><a href="#home">' + ico('eye', 16) + ' 고객 화면 보기</a><button data-act="adminOut">' + ico('logout', 16) + ' 로그아웃</button></div></aside>' +
       '<div class="adm-main"><header class="adm-top"><div><h1>' + esc(out.heading || out.title) + '</h1>' + (out.sub ? '<p>' + out.sub + '</p>' : '') + '</div><div class="adm-top-r">' + (pend ? '<a class="bd bd-warn" href="#admin-apps">신규 접수 ' + pend + '건</a>' : '') + '<span class="adm-user">' + ico('user', 16) + ' 더가넷 운영자</span></div></header>' +
       '<main id="main" class="adm-body">' + out.html + '</main></div>' + G.dockHtml() + '<div class="toast" id="toast" role="status" aria-live="polite"></div></div>';
   };
