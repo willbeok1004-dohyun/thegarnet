@@ -31,7 +31,7 @@
   var payBdS = function (st) { var a = C.PAY_ST[st] || [st, 'mute']; return '<span class="bd bd-' + a[1] + '">' + a[0] + '</span>'; };
   G.nbPayBd = payBdS;
   var isPaid = function (d) { var p = post(d.post); return p && p.pay === 'PAID' && d.price > 0; };
-  var feeLine = function (gross) { var f = G.fees(), c = G.calcFee(gross, f.club, f.minFee); return { rate: f.club, fee: c.fee, net: c.net }; };
+  var feeLine = function (gross, prov) { var f = G.fees(), r = G.feeRate ? G.feeRate(prov || uid()) : f.club, c = G.calcFee(gross, r, f.minFee); return { rate: r, fee: c.fee, net: c.net }; };
   function addHist(o, st, by, memo) { o.status = st; o.hist.push([st, G.now(), by, memo || '']); }
 
   /* 해야 할 일 개수 (마이페이지·헤더용) */
@@ -243,7 +243,7 @@
     list.forEach(function (d) { var pay = d.pay; if (!pay) return; if (d.prov === me) { if (pay.st === 'HELD' || pay.st === 'RELEASE_WAIT' || pay.st === 'DISPUTED') tot.wait += pay.net; if (pay.st === 'PAID_OUT') { tot.out += pay.net; tot.fee += pay.fee; } } if (d.req === me && pay.st !== 'REFUNDED' && pay.st !== 'READY') tot.paid += pay.gross; });
     var kp = '<div class="kpis k4"><div class="kpi"><span>정산 예정 (받을 금액)</span><b>' + G.fmt(tot.wait) + '</b></div><div class="kpi"><span>정산 완료</span><b>' + G.fmt(tot.out) + '</b></div><div class="kpi"><span>낸 수수료</span><b>' + G.fmt(tot.fee) + '</b></div><div class="kpi"><span>안전결제로 낸 금액</span><b>' + G.fmt(tot.paid) + '</b></div></div>';
     var rows = list.length ? '<div class="nb-rows">' + list.map(function (d) {
-      var p = post(d.post), pay = d.pay || { st: 'READY', gross: d.price, net: feeLine(d.price).net }, prov = d.prov === me;
+      var p = post(d.post), pay = d.pay || { st: 'READY', gross: d.price, net: feeLine(d.price, d.prov).net }, prov = d.prov === me;
       return '<a class="nbr" href="#club-deal-' + d.id + '"><div><div class="nbr-t"><b>' + esc(p.title) + '</b>' + payBdS(pay.st) + '</div><p>' + (prov ? '받는 금액 <b>' + G.fmt(pay.net) + '</b> (수수료 ' + G.fmt(pay.gross - pay.net) + ' 제외)' : '낸 금액 <b>' + G.fmt(pay.gross) + '</b>') + ' · ' + (prov ? '제공자' : '받는 분') + ' · ' + esc(nm(other(d))) + (pay.st === 'RELEASE_WAIT' && prov ? ' · 정산 예정 ' + pay.due : '') + (pay.st === 'PAID_OUT' && prov ? ' · ' + pay.outAt.slice(0, 10) + ' 지급' : '') + '</p></div>' + ico('chev-right', 18) + '</a>';
     }).join('') + '</div>' : G.empty('아직 안전결제 내역이 없어요. 유료 나눔이 시작되면 이곳에 보여요.');
     return kp + '<div class="callout">' + ico('info', 20) + '<div><strong>수수료는 제공자가 부담해요</strong><p>안전결제 수수료 ' + G.fees().club + '%(최소 ' + G.fmt(G.fees().minFee) + ')를 뺀 금액이 완료 확인 후 ' + G.fees().cycle + '일 안에 정산돼요. 무료·실비 나눔은 수수료가 없어요. <a href="#club-rules">기준 보기</a></p></div></div>' + rows;
@@ -297,12 +297,12 @@
   function paySec(d, p, me) {
     if (p.pay === 'COST') return '<h4>실비 정산</h4><p class="small">실비는 만나서 약속한 금액만 직접 나눠요. 수수료는 없어요.</p>';
     if (!isPaid(d)) return '';
-    var pay = d.pay || { st: 'READY' }, x = d.pay ? d.pay : (function () { var f = feeLine(d.price); return { gross: d.price, rate: f.rate, fee: f.fee, net: f.net }; })();
+    var pay = d.pay || { st: 'READY' }, x = d.pay ? d.pay : (function () { var f = feeLine(d.price, d.prov); return { gross: d.price, rate: f.rate, fee: f.fee, net: f.net }; })();
     var idx = { READY: 0, HELD: 1, DISPUTED: 1, RELEASE_WAIT: 2, PAID_OUT: 3, REFUNDED: 0 }[pay.st], steps = ['대금 보관', '완료 확인', '정산'];
     var bar = pay.st === 'REFUNDED' ? '' : '<ol class="stp nb-stp">' + steps.map(function (s, i) { return '<li class="' + (i < idx ? 'done' : i === idx ? 'cur' : '') + '"><span class="stp-n">' + (i < idx ? ico('check', 14) : (i + 1)) + '</span><span class="stp-t">' + s + '</span></li>'; }).join('') + '</ol>';
     var body = '';
     if (pay.st === 'READY') body = d.status !== 'VERIFIED' ? '<p class="small">안전 검증이 끝나면 받는 분이 대금을 안전하게 맡길 수 있어요.</p>' : d.req === me ?
-      '<div class="nb-hold"><label class="lb" for="pm-sel">결제 수단</label><select id="pm-sel"><option>카드</option><option>계좌이체</option><option>간편결제</option></select><button class="btn btn-fill" data-act="nbPayHold" data-id="' + d.id + '">' + G.fmt(x.gross) + ' 안전결제로 맡기기</button></div><p class="small">시연 화면이라 실제로 결제되지 않아요. 맡긴 대금은 두 분이 완료를 확인하기 전까지 제공자에게 전달되지 않아요.</p>' :
+      '<div class="nb-hold"><label class="lb" for="pm-sel">결제 수단</label><select id="pm-sel">' + (G.payOptions ? G.payOptions() : '<option>카드</option><option>계좌이체</option><option>간편결제</option>') + '</select><button class="btn btn-fill" data-act="nbPayHold" data-id="' + d.id + '">' + G.fmt(x.gross) + ' 안전결제로 맡기기</button></div><p class="small">시연 화면이라 실제로 결제되지 않아요. 맡긴 대금은 두 분이 완료를 확인하기 전까지 제공자에게 전달되지 않아요.</p>' :
       '<p class="small">받는 분이 안전결제로 대금을 맡기면 알려드려요. 대금이 보관된 뒤에 활동을 시작해 주세요.</p>';
     else if (pay.st === 'HELD') body = '<div class="callout">' + ico('lock', 20) + '<div><strong>대금이 안전하게 보관되고 있어요</strong><p>활동이 끝나고 두 분이 완료를 확인하면 정산돼요. 약속과 다르면 정산 전에 분쟁을 접수해 주세요.</p></div></div>' + (d.status === 'VERIFIED' ? '<p><button class="lnk-u" data-act="nbDspOpen">문제가 있어요 · 분쟁 접수</button></p><div class="cfm" id="nbdsp" hidden><textarea id="nbdsp-t" rows="3" placeholder="어떤 문제가 있었는지 10자 이상 적어 주세요."></textarea><p class="err" id="nbdsp-e" hidden>10자 이상 적어 주세요.</p><div class="fa"><button class="btn btn-danger btn-sm" data-act="nbDispute" data-id="' + d.id + '">분쟁 접수</button><button class="btn btn-ghost btn-sm" data-act="nbDspOpen">닫기</button></div></div>' : '');
     else if (pay.st === 'DISPUTED') body = '<div class="callout warn">' + ico('info', 20) + '<div><strong>운영자가 분쟁을 확인하고 있어요</strong><p>접수 내용: ' + esc(pay.disputeNote || '') + '<br>확인 결과에 따라 환불하거나 정산해요. 그동안 대금은 계속 보관돼요.</p></div></div>';
@@ -312,7 +312,7 @@
     return '<h4>안전결제 ' + payBdS(pay.st) + '</h4>' + bar + '<dl class="sum"><div class="kv"><dt>약속 금액</dt><dd>' + G.fmt(x.gross) + '</dd></div><div class="kv"><dt>안전결제 수수료</dt><dd>' + G.fmt(x.fee) + ' <span class="small">(' + x.rate + '% · 제공자 부담)</span></dd></div><div class="kv"><dt>제공자 정산액</dt><dd><b>' + G.fmt(x.net) + '</b></dd></div></dl>' + body;
   }
   G.ACT.nbPayHold = function (el) {
-    var d = deal(el.dataset.id), m = document.getElementById('pm-sel').value, x = feeLine(d.price);
+    var d = deal(el.dataset.id), m = document.getElementById('pm-sel').value, x = feeLine(d.price, d.prov);
     d.pay = { st: 'HELD', gross: d.price, rate: x.rate, fee: x.fee, net: x.net, method: m, heldAt: G.now() };
     d.hist.push([d.status, G.now(), S.user.name, '안전결제로 대금을 보관했어요. (' + m + ', 시연)']); G.log('이웃 나눔 ' + d.id + ' 대금 보관 ' + G.fmt(d.price)); G.toast('대금을 안전하게 맡겼어요.'); G.rerender();
   };

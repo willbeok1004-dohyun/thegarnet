@@ -8,12 +8,14 @@
   function shell(cur, title, body, sub) {
     var u = S.user, apps = myApps(), todo = apps.filter(function (a) { return a.status === 'WAITING_APPROVAL' || a.status === 'NEED_INFO'; }).length;
     return { title: title, html: '<section class="mp-h"><div class="wrap"><p class="kick">MY GARNET</p><h1 class="h2">' + esc(u.name) + '님의 공간</h1><p class="lead">' + (todo ? '확인이 필요한 신청이 <b>' + todo + '건</b> 있어요.' : '지금 확인할 일이 없어요. 천천히 둘러보세요.') + '</p></div></section>' +
-      '<section class="sec sec-tight"><div class="wrap mp"><nav class="mp-nav" aria-label="마이페이지">' + NAVI.map(function (n) { return '<a href="#' + (n[3] || 'my-' + n[0]) + '" class="' + (cur === n[0] ? 'on' : '') + '">' + ico(n[2], 18) + '<span>' + n[1] + '</span>' + (n[0] === 'apps' && todo ? '<i class="dot-n">' + todo + '</i>' : '') + '</a>'; }).join('') + '</nav><div class="mp-main"><h2 class="h3">' + title + '</h2>' + (sub ? '<p class="small mb">' + sub + '</p>' : '') + body + '</div></div></section>' };
+      '<section class="sec sec-tight"><div class="wrap mp"><nav class="mp-nav" aria-label="마이페이지">' + NAVI.concat(G.myNavExtra ? G.myNavExtra() : []).map(function (n) { return '<a href="#' + (n[3] || 'my-' + n[0]) + '" class="' + (cur === n[0] ? 'on' : '') + '">' + ico(n[2], 18) + '<span>' + n[1] + '</span>' + (n[0] === 'apps' && todo ? '<i class="dot-n">' + todo + '</i>' : '') + '</a>'; }).join('') + '</nav><div class="mp-main"><h2 class="h3">' + title + '</h2>' + (sub ? '<p class="small mb">' + sub + '</p>' : '') + body + '</div></div></section>' };
   }
+  G.myShell = function (c, t, b, sb) { return shell(c, t, b, sb); };
   P.my = function (arg) {
     if (!S.user) { S.ret = 'my' + (arg ? '-' + arg : ''); G.save(); var l = P.login(); l.title = '로그인'; return l; }
     var a = arg || 'apps';
     if (a.indexOf('app-') === 0) return detail(a.slice(4));
+    if (G.myPages && G.myPages[a.split('-')[0]]) return G.myPages[a.split('-')[0]](a.slice(a.indexOf('-') + 1 || a.length));
     return ({ apps: apps, inq: inq, plan: plan, favs: favs, reviews: reviews, profile: profile, info: info }[a] || apps)();
   };
 

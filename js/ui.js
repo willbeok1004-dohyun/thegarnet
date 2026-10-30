@@ -15,13 +15,13 @@
       '<p class="dock-t">화면 전환</p>' +
       '<div class="seg"><button class="' + (cur === 'customer' ? 'on' : '') + '" data-act="role" data-to="home">고객</button><button class="' + (cur === 'partner' ? 'on' : '') + '" data-act="role" data-to="partner">협력업체</button><button class="' + (cur === 'admin' ? 'on' : '') + '" data-act="role" data-to="admin">관리자</button></div>' +
       '<label class="dock-sw"><input type="checkbox" ' + (all ? 'checked' : '') + ' data-on="change:allBookable"><span>모든 서비스를 신청 가능으로 보기</span></label>' +
-      '<button class="dock-reset" data-act="reset">시연 데이터 초기화</button>' +
+      (G.dockExtra ? G.dockExtra() : '') + '<button class="dock-reset" data-act="reset">시연 데이터 초기화</button>' +
       '<p class="dock-n">실제 결제·접수·저장은 없으며, 입력한 내용은 이 브라우저에만 남습니다.</p></div></div>';
   };
 
   G.siteLayout = function (out, r) {
-    var u = S.user, act = NAVMAP[r.name] || r.name;
-    var nav = NAV.map(function (n) { return '<a href="#' + n[0] + '" class="' + (act === n[0] ? 'on' : '') + '">' + n[1] + '</a>'; }).join('');
+    var u = S.user, act = (G.navMapExtra && G.navMapExtra[r.name]) || NAVMAP[r.name] || r.name;
+    var nav = (G.siteNav ? G.siteNav(NAV) : NAV).map(function (n) { return '<a href="#' + n[0] + '" class="' + (act === n[0] ? 'on' : '') + '">' + n[1] + '</a>'; }).join('');
     var favN = S.favs.length;
     var right = u
       ? '<a class="hd-link" href="#my" title="마이페이지">' + ico('user', 18) + '<span>' + esc(u.name) + '님</span></a><button class="hd-link" data-act="logout">로그아웃</button>'
@@ -33,13 +33,13 @@
       '<div class="hd-r">' + right + '<a class="btn btn-line btn-sm hd-cta" href="#find">나에게 맞는 돌봄</a>' +
       '<button class="burger" data-act="menu" aria-label="메뉴 열기" aria-expanded="false">' + ico('menu', 24) + '</button></div></div>' +
       '<div class="drawer" id="drawer"><nav aria-label="모바일 메뉴">' + nav + '<a href="#find">나에게 맞는 돌봄</a>' + (u ? '<a href="#my">마이페이지</a><button data-act="logout">로그아웃</button>' : '<a href="#login">로그인</a><a href="#signup">회원가입</a>') + '</nav></div></header>' +
-      '<main id="main">' + out.html + '</main>' +
+      (G.siteTopExtra ? G.siteTopExtra(out, r) : '') + '<main id="main">' + out.html + '</main>' +
       '<footer class="ft"><div class="wrap">' +
       '<div class="ft-top"><div><div class="logo-m ft-logo">THE GARNET<i>.</i></div><p class="ft-tag">마음과 집, 반려동물과 지역을 잇는 다정한 돌봄.</p></div>' +
       '<nav class="ft-nav" aria-label="바로가기"><a href="#services">전체 서비스</a><a href="#home">운영 기준</a><a href="#memo">상담 메모 만들기</a><a href="#faq">자주 묻는 질문</a></nav></div>' +
       '<div class="ft-mid"><div><h4>고객센터</h4><p>' + esc(SITE.phone) + ' · ' + esc(SITE.email) + '</p><p>' + esc(SITE.hours) + '</p></div><div><h4>사업자 정보</h4><p>' + esc(SITE.address) + '</p></div><div class="ft-legal"><a href="#terms">이용약관</a><a href="#privacy"><strong>개인정보 처리방침</strong></a><a href="#refund">취소·환불 정책</a></div></div>' +
       '<p class="ft-c">© 2026 THE GARNET. 이 화면은 미리보기용 시안이며 실제 접수·결제·후원금 수령은 이루어지지 않습니다.</p></div></footer>' +
-      G.dockHtml() + '<div class="toast" id="toast" role="status" aria-live="polite"></div></div>';
+      (G.siteBottomExtra ? G.siteBottomExtra(out, r) : '') + G.dockHtml() + '<div class="toast" id="toast" role="status" aria-live="polite"></div></div>';
   };
 
   /* 관리자 레이아웃 */
@@ -51,11 +51,12 @@
   G.adminLayout = function (out, r) {
     var PFX = [['admin-app-', 'admin-apps'], ['admin-club', 'admin-club'], ['admin-settle', 'admin-settle'], ['admin-member-', 'admin-members'], ['admin-partner-', 'admin-partners'], ['admin-notice-', 'admin-notices'], ['admin-faq-', 'admin-notices'], ['admin-svc-', 'admin-svcs']];
     var cur = r.raw; PFX.some(function (p) { if (r.raw.indexOf(p[0]) === 0) { cur = p[1]; return true; } return false; });
-    var nav = ADM.map(function (n) { if (n[0] === '#h') return '<p class="adm-h">' + n[1] + '</p>'; return '<a href="#' + n[0] + '" class="' + (cur === n[0] ? 'on' : '') + '">' + ico(n[2], 18) + '<span>' + n[1] + '</span>' + (n[0] === 'admin-club' && G.clubTodoCount && G.clubTodoCount() ? '<i class="dot-n">' + G.clubTodoCount() + '</i>' : '') + (n[0] === 'admin-settle' && G.settleTodoCount && G.settleTodoCount() ? '<i class="dot-n">' + G.settleTodoCount() + '</i>' : '') + '</a>'; }).join('');
+    if (G.admCurMap) { var c2 = G.admCurMap(r.raw); if (c2) cur = c2; }
+    var nav = (G.admMenu ? G.admMenu() : ADM).map(function (n) { if (n[0] === '#h') return '<p class="adm-h">' + n[1] + '</p>'; return '<a href="#' + n[0] + '" class="' + (cur === n[0] ? 'on' : '') + '">' + ico(n[2], 18) + '<span>' + n[1] + '</span>' + (G.admBadge && G.admBadge(n[0]) ? '<i class="dot-n">' + G.admBadge(n[0]) + '</i>' : '') + (n[0] === 'admin-club' && G.clubTodoCount && G.clubTodoCount() ? '<i class="dot-n">' + G.clubTodoCount() + '</i>' : '') + (n[0] === 'admin-settle' && G.settleTodoCount && G.settleTodoCount() ? '<i class="dot-n">' + G.settleTodoCount() + '</i>' : '') + '</a>'; }).join('');
     var pend = S.apps.filter(function (a) { return a.status === 'SUBMITTED'; }).length;
     return '<div class="adm"><aside class="adm-side"><a class="adm-logo" href="#admin"><span class="logo-m">THE GARNET<i>.</i></span><small>운영 관리</small></a>' +
       '<nav aria-label="관리자 메뉴">' + nav + '</nav><div class="adm-foot"><p class="adm-h">바로가기</p><a href="#home">' + ico('eye', 16) + ' 고객 화면 보기</a><button data-act="adminOut">' + ico('logout', 16) + ' 로그아웃</button></div></aside>' +
-      '<div class="adm-main"><header class="adm-top"><div><h1>' + esc(out.heading || out.title) + '</h1>' + (out.sub ? '<p>' + out.sub + '</p>' : '') + '</div><div class="adm-top-r">' + (pend ? '<a class="bd bd-warn" href="#admin-apps">신규 접수 ' + pend + '건</a>' : '') + '<span class="adm-user">' + ico('user', 16) + ' 더가넷 운영자</span></div></header>' +
+      '<div class="adm-main"><header class="adm-top"><div><h1>' + esc(out.heading || out.title) + '</h1>' + (out.sub ? '<p>' + out.sub + '</p>' : '') + '</div><div class="adm-top-r">' + (pend ? '<a class="bd bd-warn" href="#admin-apps">신규 접수 ' + pend + '건</a>' : '') + (G.admTopExtra ? G.admTopExtra() : '') + '<span class="adm-user">' + ico('user', 16) + ' 더가넷 운영자</span></div></header>' +
       '<main id="main" class="adm-body">' + out.html + '</main></div>' + G.dockHtml() + '<div class="toast" id="toast" role="status" aria-live="polite"></div></div>';
   };
 

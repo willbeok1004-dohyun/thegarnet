@@ -17,7 +17,7 @@
   var pname = function (id) { var p = byId(PARTNERS, id); return p ? p.name : id; };
 
   var MST = { ACTIVE: ['활성', 'ok'], DORMANT: ['휴면', 'mute'], SUSPENDED: ['이용 정지', 'bad'], WITHDRAWN: ['탈퇴', 'mute'] };
-  var ROLE = { ADMIN: '최고관리자', MANAGER: '운영담당' };
+  var ROLE = G.ROLE = { ADMIN: '최고관리자', MANAGER: '운영담당', BRANCH: '가맹점 매니저' };
   var ASG = { ASSIGNED: ['배정', 'info'], CONFIRMED: ['업체 확정', 'ok'], DONE: ['수행 완료', 'dark'], CANCELLED: ['배정 취소', 'mute'] };
   var SCH = { PLANNED: ['예정', 'info'], DONE: ['완료', 'dark'], CANCELLED: ['취소', 'mute'] };
   var KIND = { LOGIN: ['로그인', 'info'], VIEW: ['열람', 'mute'], CHANGE: ['변경', 'warn'] };
