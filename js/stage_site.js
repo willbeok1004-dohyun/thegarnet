@@ -72,60 +72,105 @@
   G.dockExtra = function () { return S.adminAuthed && G.adminMe && G.adminMe().role === 'ADMIN' ? '<a class="dock-reset dock-ft" href="#admin-features">' + ico('sliders', 16) + ' 단계별 기능 공개</a>' : '<a class="dock-reset dock-ft" href="#admin-login">' + ico('sliders', 16) + ' 단계별 기능 공개 (관리자)</a>'; };
 
   /* ================= 거점 찾기 ================= */
-  var hubFilter = '';
+  var hf = { b: '', q: '', box: false, meet: false, elev: false, park: false, open: false, near: null };
+  var has = function (h, w) { return h.facil.some(function (x) { return x.indexOf(w) >= 0; }); };
+  /* 운영 시간 문구로 지금 운영 중인지 판단 (시연: 평일·토·매일·24시간만 해석) */
+  G.hubOpen = function (h) {
+    var d = new Date(), wd = d.getDay(), hm = d.getHours() * 60 + d.getMinutes(), txt = h.hours || '';
+    if (/24시간/.test(txt)) return true;
+    var segs = txt.split('·'), ok = false;
+    segs.forEach(function (sg) { var m = sg.match(/(\d{2}):(\d{2})\s*[–~-]\s*(\d{2}):(\d{2})/); if (!m) return; var st = +m[1] * 60 + +m[2], en = +m[3] * 60 + +m[4];
+      var day = /매일/.test(sg) ? true : /평일/.test(sg) ? (wd >= 1 && wd <= 5) : /토/.test(sg) && !/화/.test(sg) ? wd === 6 : /화–토|화-토/.test(sg) ? (wd >= 2 && wd <= 6) : (wd >= 1 && wd <= 5);
+      if (day && hm >= st && hm <= en) ok = true; });
+    return ok;
+  };
+  var dist = function (a, b) { var R = 6371, toR = Math.PI / 180, dLa = (b[0] - a[0]) * toR, dLo = (b[1] - a[1]) * toR, x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a[0] * toR) * Math.cos(b[0] * toR) * Math.sin(dLo / 2) * Math.sin(dLo / 2); return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x)); };
   function hubCard(h) {
-    var b = G.branch(h.branch) || {};
-    return '<article class="hub" data-b="' + h.branch + '"><div class="hub-h"><span class="bd bd-' + (h.kind === '가맹점' ? 'dark' : 'info') + '">' + esc(h.kind) + '</span><span class="small">' + esc(b.name || '') + '</span></div><h3><a href="#place-' + h.id + '">' + esc(h.name) + '</a></h3>' +
-      '<p class="hub-near">' + ico('pin', 16) + esc(h.near) + '</p><ul class="nb-m"><li>' + ico('clock', 15) + esc(h.hours) + '</li><li>' + ico('phone', 15) + esc(h.phone) + '</li></ul><p>' + h.facil.map(function (x) { return '<span class="tag">' + esc(x) + '</span>'; }).join('') + '</p>' +
+    var b = G.branch(h.branch) || {}, km = hf.near && T().geo && T().geo[h.id] ? dist(hf.near, T().geo[h.id]) : null;
+    return '<article class="hub" data-b="' + h.branch + '"><div class="hub-h"><span class="bd bd-' + (h.kind === '가맹점' ? 'dark' : 'info') + '">' + esc(h.kind) + '</span><span class="small">' + (km != null ? '<b>' + km.toFixed(1) + 'km</b> · ' : '') + esc((b.name || '').replace(' (예시)', '')) + '</span></div><h3><a href="#place-' + h.id + '">' + esc(h.name) + '</a></h3>' +
+      '<p class="hub-near">' + ico('pin', 16) + esc(h.near) + '</p><ul class="nb-m"><li>' + ico('clock', 15) + esc(h.hours) + (G.hubOpen(h) ? ' <span class="bd bd-ok">지금 운영 중</span>' : '') + '</li>' + (h.closed ? '<li>휴무 ' + esc(h.closed) + '</li>' : '') + '<li>' + ico('phone', 15) + esc(h.phone) + '</li></ul><p>' + h.facil.map(function (x) { return '<span class="tag">' + esc(x) + '</span>'; }).join('') + '</p>' +
       '<div class="fa"><a class="btn btn-fill btn-sm" href="#place-' + h.id + '">자세히 · 찾아가기</a><a class="btn btn-line btn-sm" href="tel:' + h.phone.replace(/[^\d]/g, '') + '">' + ico('phone', 16) + ' 전화</a></div></article>';
   }
   function mapSvg(hubs, cur) {
     return '<figure class="hub-map" aria-label="거점 약도"><svg viewBox="0 0 600 300" role="img"><title>거점 약도 (실제 지도가 아닌 위치 안내용 그림)</title><rect width="600" height="300" rx="14" fill="var(--sand)"/><path d="M0 190 C120 160 220 230 340 190 S520 150 600 175" stroke="#cfe0e6" stroke-width="16" fill="none"/><path d="M80 0 L140 300 M360 0 L320 300 M0 90 L600 120" stroke="#fff" stroke-width="10"/>' +
       hubs.map(function (h) { var x = Math.round(h.x * 560 + 20), y = Math.round(h.y * 240 + 30), on = h.id === cur; return '<a href="#place-' + h.id + '"><g transform="translate(' + x + ',' + y + ')"><circle r="' + (on ? 13 : 10) + '" fill="' + (h.kind === '가맹점' ? 'var(--garnet)' : 'var(--info)') + '" stroke="#fff" stroke-width="3"/><text y="-18" text-anchor="middle" font-size="13" fill="var(--ink)">' + esc(h.name.replace(/ \(.*\)/, '')) + '</text></g></a>'; }).join('') +
-      '</svg><figcaption class="small">' + ico('info', 14) + ' 위치를 이해하기 쉽게 그린 약도예요. 정확한 길은 지도 앱 버튼으로 확인하세요. 내 위치(GPS)는 쓰지 않아요.</figcaption></figure>';
+      '</svg><figcaption class="small">' + ico('info', 14) + ' 위치를 이해하기 쉽게 그린 약도예요. 정확한 길은 지도 앱 버튼으로 확인하세요.' + (f('gps') ? ' 내 위치는 동의한 경우에만 이 화면에서 거리 계산에 쓰고 저장하지 않아요.' : ' 내 위치(GPS)는 쓰지 않아요.') + '</figcaption></figure>';
   }
   P.places = function () {
     if (!f('places')) return offPage('거점 찾기');
-    var hubs = T().hubs, my = S.user ? G.memInfo(uid()).branch : '';
-    var chips = '<div class="chips" role="group" aria-label="동네">' + [['', '전체 동네']].concat(T().branches.map(function (b) { return [b.id, b.name.replace(' (예시)', '') + (b.id === my ? ' · 내 동네' : '')]; })).map(function (c) { return '<button class="chip' + (hubFilter === c[0] ? ' on' : '') + '" data-act="hubF" data-v="' + c[0] + '">' + esc(c[1]) + '</button>'; }).join('') + '</div>';
-    var l = hubs.filter(function (h) { return !hubFilter || h.branch === hubFilter; });
+    var my = S.user ? G.memInfo(uid()).branch : '', q = hf.q.toLowerCase();
+    var chips = '<div class="chips" role="group" aria-label="동네">' + [['', '전체 동네']].concat(T().branches.map(function (b) { return [b.id, b.name.replace(' (예시)', '') + (b.id === my ? ' · 내 동네' : '')]; })).map(function (c) { return '<button class="chip' + (hf.b === c[0] ? ' on' : '') + '" data-act="hubF" data-v="' + c[0] + '">' + esc(c[1]) + '</button>'; }).join('') + '</div>';
+    var tg = [['box', '보관함'], ['meet', '모임 가능'], ['elev', '엘리베이터·1층'], ['park', '주차'], ['open', '지금 운영 중']];
+    var tools = '<div class="nb-bar hub-tools"><form class="srch-f" data-sub="hubQ" role="search"><label class="srch">' + ico('search', 18) + '<input id="hq" type="search" value="' + esc(hf.q) + '" placeholder="동 이름·역 이름·주소로 찾기 (예: 마포, ○○역)"></label><button class="btn btn-line btn-sm" type="submit">찾기</button></form>' +
+      tg.map(function (t) { return '<label class="tgl"><input type="checkbox" data-on="change:hubT" data-k="' + t[0] + '"' + (hf[t[0]] ? ' checked' : '') + '> ' + t[1] + '</label>'; }).join('') +
+      (f('gps') ? '<button class="btn btn-ghost btn-sm" data-act="hubGps">' + ico('pin', 16) + (hf.near ? ' 내 위치 기준 정렬 중' : ' 내 위치로 찾기') + '</button>' : '') + '</div>' + (hf.ask ? '<div class="callout warn">' + ico('pin', 20) + '<div><strong>내 위치를 써도 될까요?</strong><p>가까운 거점을 찾는 데 지금 한 번만 쓰고 저장하지 않아요. 원하지 않으면 동·역 이름으로 찾아 주세요.</p><p class="fa"><button class="btn btn-fill btn-sm" data-act="hubGpsOk">동의하고 찾기</button><button class="btn btn-ghost btn-sm" data-act="hubGps">취소</button></p></div></div>' : '');
+    var l = T().hubs.filter(function (h) {
+      if (hf.b && h.branch !== hf.b) return false;
+      if (q && (h.name + ' ' + h.addr + ' ' + h.near + ' ' + ((G.branch(h.branch) || {}).area || []).join(' ')).toLowerCase().indexOf(q) < 0) return false;
+      if (hf.box && !(h.lockers > 0)) return false; if (hf.meet && !h.meet) return false;
+      if (hf.elev && !(has(h, '엘리베이터') || has(h, '1층'))) return false; if (hf.park && !has(h, '주차')) return false; if (hf.open && !G.hubOpen(h)) return false;
+      return true;
+    });
+    if (hf.near && T().geo) l.sort(function (a, b) { return dist(hf.near, T().geo[a.id] || hf.near) - dist(hf.near, T().geo[b.id] || hf.near); });
     return page('거점 찾기', G.pageHead('가까운 거점을 찾아보세요', '물건을 맡기고 찾는 곳, 이웃과 모이는 곳이에요. 큰 건물과 지하철 출구를 기준으로 길을 알려 드려요.', [['우리 동네', 'town'], ['거점 찾기']], 'PLACES'),
-      townTabs('places') + chips + mapSvg(l, '') + '<div class="hub-grid">' + l.map(hubCard).join('') + '</div>' + (f('hubOps') ? '<div class="callout">' + ico('lock', 20) + '<div><strong>거점 보관함 이용 기준</strong><p>품온 나눔품·바꿈품은 거점 보관함에 맡기고 보관 코드로 찾아가요. 보관은 7일까지, 식품·의약품·고가품은 맡길 수 없어요.</p></div></div>' : ''));
+      townTabs('places') + chips + tools + mapSvg(l, '') + (l.length ? '<div class="hub-grid">' + l.map(hubCard).join('') + '</div>' : G.empty('조건에 맞는 거점이 없어요. 거르기를 줄여 보세요.')) +
+      (f('hubOps') ? '<div class="callout">' + ico('lock', 20) + '<div><strong>거점 보관함 이용 기준</strong><p>품온 나눔품·바꿈품은 거점 보관함에 맡기고 인증번호로 찾아가요. 보관은 7일, 기한이 지나면 알려 드리고 7일이 더 지나면 기부하거나 정리해요. 보관함보다 큰 물건과 식품·의약품·개봉 화장품은 맡길 수 없어요. 거점은 보관만 돕고 물건 상태는 책임지지 않아요.</p></div></div>' : ''));
   };
-  G.ACT.hubF = function (el) { hubFilter = el.dataset.v; G.rerender(); };
+  G.ACT.hubF = function (el) { hf.b = el.dataset.v; G.rerender(); };
+  G.SUB.hubQ = function () { hf.q = val('hq'); G.rerender(); };
+  G.INP.hubT = function (el) { hf[el.dataset.k] = el.checked; G.rerender(); };
+  G.ACT.hubGps = function () { if (hf.ask) hf.ask = false; else if (hf.near) hf.near = null; else hf.ask = true; G.rerender(); };
+  G.ACT.hubGpsOk = function () {
+    hf.ask = false; var useDemo = function (why) { hf.near = [37.5579, 126.9250]; G.toast(why + ' 시연용으로 마포 기준 위치를 썼어요.'); G.rerender(); };
+    try { navigator.geolocation.getCurrentPosition(function (pos) { hf.near = [pos.coords.latitude, pos.coords.longitude]; G.toast('가까운 순서로 보여 드려요. 위치는 저장하지 않아요.'); G.rerender(); }, function () { useDemo('위치를 받지 못해'); }, { timeout: 4000 }); } catch (e) { useDemo('위치 기능을 쓸 수 없어'); }
+  };
   P.place = function (id) {
     var h = G.hub(id); if (!f('places') || !h) return offPage('거점');
     var b = G.branch(h.branch) || {}, ev = f('events') ? T().events.filter(function (e) { return e.hub === h.id && e.date.slice(0, 10) >= SITE.today && !e.pending; }) : [];
     var nw = f('news') ? T().news.filter(function (n) { return n.branch === h.branch; }).slice(0, 3) : [];
+    var photo = '<figure class="hub-ph">' + (h.photo ? '<img src="' + esc(h.photo) + '" alt="' + esc(h.name) + ' 입구">' : '<div class="hub-ph-x">' + ico('home', 28) + '<span>입구 사진 (가맹점이 등록하면 보여요)</span></div>') + '<figcaption class="small">' + esc(h.near) + '</figcaption></figure>';
     return { title: h.name, html: '<section class="sd"><div class="wrap"><nav class="crumb crumb-row" aria-label="현재 위치"><a href="#home">홈</a><a href="#places">거점 찾기</a><span>' + esc(h.name) + '</span></nav><div class="sd-in"><div>' +
-      '<p class="meta"><span class="bd bd-' + (h.kind === '가맹점' ? 'dark' : 'info') + '">' + esc(h.kind) + '</span><span class="grp">' + esc(b.name || '') + '</span></p><h1 class="h2">' + esc(h.name) + '</h1>' +
+      '<p class="meta"><span class="bd bd-' + (h.kind === '가맹점' ? 'dark' : 'info') + '">' + esc(h.kind) + '</span><span class="grp">' + esc(b.name || '') + '</span>' + (G.hubOpen(h) ? '<span class="bd bd-ok">지금 운영 중</span>' : '<span class="bd bd-mute">지금은 운영 시간이 아니에요</span>') + '</p><h1 class="h2">' + esc(h.name) + '</h1>' +
       mapSvg(T().hubs.filter(function (x) { return x.branch === h.branch; }), h.id) +
-      '<div class="blk"><h2>찾아오는 길</h2><ol class="tl"><li><span>1</span><b>' + esc(h.near) + '</b></li><li><span>2</span><b>주소: ' + esc(h.addr) + '</b></li><li><span>3</span><b>도착하면 ' + (h.kind === '가맹점' ? '매장 직원' : '안내 데스크') + '에게 "더가넷 품온"이라고 말씀해 주세요.</b></li></ol><div class="fa">' + mapLinks(h.addr, h.name) + '<button class="btn btn-ghost btn-sm" data-act="copyAddr" data-v="' + esc(h.addr) + '">' + ico('copy', 16) + ' 주소 복사</button></div></div>' +
-      '<div class="blk"><h2>이용 안내</h2><dl class="sum"><div class="kv"><dt>운영 시간</dt><dd>' + esc(h.hours) + '</dd></div><div class="kv"><dt>연락처</dt><dd>' + esc(h.phone) + '</dd></div><div class="kv"><dt>편의</dt><dd>' + h.facil.map(esc).join(' · ') + '</dd></div>' + (f('hubOps') ? '<div class="kv"><dt>보관함</dt><dd>' + h.lockers + '칸 · 7일 보관</dd></div>' : '') + '<div class="kv"><dt>모임</dt><dd>' + (h.meet ? '이웃 모임 장소로 쓸 수 있어요' : '모임 장소는 아니에요') + '</dd></div></dl></div>' +
-      (ev.length ? '<div class="blk"><h2>이곳에서 열리는 모임</h2><ul class="mng">' + ev.map(function (e) { return '<li><div><b>' + esc(e.title) + '</b><small>' + e.date + ' · ' + e.joined.length + '/' + e.cap + '명</small></div><a class="btn btn-line btn-sm" href="#event-' + e.id + '">보기</a></li>'; }).join('') + '</ul></div>' : '') +
+      '<div class="blk"><h2>찾아오는 길</h2>' + photo + '<ol class="tl"><li><span>1</span><b>' + esc(h.near) + '</b></li><li><span>2</span><b>주소: ' + esc(h.addr) + '</b></li><li><span>3</span><b>도착하면 ' + (h.kind === '가맹점' ? '매장 직원' : '안내 데스크') + '에게 "더가넷 품온"이라고 말씀해 주세요.</b></li></ol><div class="fa">' + mapLinks(h.addr, h.name) + '<button class="btn btn-ghost btn-sm" data-act="copyAddr" data-v="' + esc(h.addr) + '">' + ico('copy', 16) + ' 주소 복사</button></div></div>' +
+      '<div class="blk"><h2>이용 안내</h2><dl class="sum"><div class="kv"><dt>운영 시간</dt><dd>' + esc(h.hours) + '</dd></div><div class="kv"><dt>휴무일</dt><dd>' + esc(h.closed || '공휴일') + '</dd></div><div class="kv"><dt>연락처</dt><dd>' + esc(h.phone) + '</dd></div><div class="kv"><dt>편의</dt><dd>' + h.facil.map(esc).join(' · ') + '</dd></div>' + (f('hubOps') ? '<div class="kv"><dt>보관함</dt><dd>' + h.lockers + '칸 · 7일 보관 (보관함보다 큰 물건은 안 돼요)</dd></div>' : '') + '<div class="kv"><dt>모임</dt><dd>' + (h.meet ? '이웃 모임 장소로 쓸 수 있어요' : '모임 장소는 아니에요') + '</dd></div></dl></div>' +
+      (ev.length ? '<div class="blk"><h2>이번 달 모임</h2><ul class="mng">' + ev.map(function (e) { return '<li><div><b>' + esc(e.title) + '</b><small>' + e.date + ' · ' + e.joined.length + '/' + e.cap + '명</small></div><a class="btn btn-line btn-sm" href="#event-' + e.id + '">보기</a></li>'; }).join('') + '</ul></div>' : '') +
       (nw.length ? '<div class="blk"><h2>동네 소식</h2><ul class="mng">' + nw.map(function (n) { return '<li><div><b>' + esc(n.title) + '</b><small>' + esc(n.cat) + ' · ' + n.date + '</small></div></li>'; }).join('') + '</ul></div>' : '') +
-      '</div><aside class="sd-aside"><div class="buy"><p class="buy-k">' + esc(b.name || '') + '</p><h2>' + esc(h.name) + '</h2><a class="btn btn-fill btn-block" href="tel:' + h.phone.replace(/[^\d]/g, '') + '">' + ico('phone', 18) + ' 전화하기</a>' + mapLinks(h.addr, h.name).replace(/btn-sm/g, 'btn-block') + '<dl class="buy-dl"><div><dt>운영</dt><dd>' + esc(h.hours) + '</dd></div><div><dt>가맹점</dt><dd>' + esc(b.phone || '') + '</dd></div></dl></div></aside></div></div></section>' };
+      '</div><aside class="sd-aside"><div class="buy"><p class="buy-k">' + esc(b.name || '') + '</p><h2>' + esc(h.name) + '</h2><a class="btn btn-fill btn-block" href="tel:' + h.phone.replace(/[^\d]/g, '') + '">' + ico('phone', 18) + ' 전화하기</a>' + mapLinks(h.addr, h.name).replace(/btn-sm/g, 'btn-block') +
+      '<button class="btn btn-ghost btn-block" data-act="hubSend" data-id="' + h.id + '" data-to="me">' + ico('message', 16) + ' 내 휴대폰으로 받기</button>' + (S.user && f('family') ? '<button class="btn btn-ghost btn-block" data-act="hubSend" data-id="' + h.id + '" data-to="fam">' + ico('users', 16) + ' 가족에게도 보내기</button>' : '') +
+      '<dl class="buy-dl"><div><dt>운영</dt><dd>' + esc(h.hours) + '</dd></div><div><dt>가맹점</dt><dd>' + esc(b.phone || '') + '</dd></div></dl></div></aside></div></div></section>' };
+  };
+  G.ACT.hubSend = function (el) {
+    var h = G.hub(el.dataset.id), txt = '[더가넷] ' + h.name + ' · ' + h.addr + ' · ' + h.near + ' · 지도: map.kakao.com/link/search/' + encodeURIComponent(h.addr);
+    if (!S.user) { G.toast('로그인하면 알림톡으로 보내 드려요. 지금은 주소 복사를 이용해 주세요.'); return; }
+    if (el.dataset.to === 'fam') { var fam = T().family[uid()]; if (!fam || !(fam.receivers || []).length) { G.toast('가족·안심에서 받을 가족을 먼저 등록해 주세요.'); return; } fam.receivers.forEach(function (r) { T().notify.unshift({ at: G.now(), to: uid(), via: r.name, text: '(' + r.name + '님께 발송) ' + txt }); }); G.save(); G.toast('가족에게 주소와 지도 링크를 보냈어요. (시연)'); return; }
+    G.notify(uid(), txt); G.save(); if (!f('alimtalk')) G.toast('주소와 지도 링크를 알림톡으로 보냈어요. (시연)');
   };
   G.ACT.copyAddr = function (el) { var v = el.dataset.v; try { navigator.clipboard.writeText(v).then(function () { G.toast('주소를 복사했어요.'); }, function () { G.toast(v); }); } catch (e) { G.toast(v); } };
 
   /* ================= 창립회원 사전 신청 ================= */
+  G.PRE_GOAL = 30;
   P.preorder = function () {
     if (!f('preorder')) return offPage('사전 신청');
     var cnt = function (b) { return T().preorders.filter(function (r) { return r.branch === b; }).length + (T().preorderBase[b] || 0); };
-    var bars = T().branches.map(function (b) { var n = cnt(b.id); return '<li><span>' + esc(b.name.replace(' (예시)', '')) + '</span><i><em style="width:' + Math.min(100, n * 2) + '%"></em></i><b>' + n + ' / 50명</b></li>'; }).join('');
+    var bars = T().branches.map(function (b) { var n = cnt(b.id); return '<li><span>' + esc(b.name.replace(' (예시)', '')) + '</span><i><em style="width:' + Math.min(100, Math.round(n / G.PRE_GOAL * 100)) + '%"></em></i><b>' + n + ' / ' + G.PRE_GOAL + '명' + (n >= G.PRE_GOAL ? ' ✓' : '') + '</b></li>'; }).join('');
+    var tot = T().branches.reduce(function (s0, b) { return s0 + cnt(b.id); }, 0);
     var wants = ['재능품', '서로품', '나눔품', '바꿈품', '공식 모임'];
-    var form = '<form class="card form" data-sub="preSave" novalidate><h2 class="h3">사전 신청</h2><div class="fgrid">' + fg('po-n', '이름', '<input id="po-n" autocomplete="name">') + fg('po-p', '휴대폰 번호', '<input id="po-p" type="tel" inputmode="tel" placeholder="010-0000-0000">') +
-      fg('po-b', '우리 동네', sel('po-b', T().branches.map(function (b) { return [b.id, b.name + ' (' + b.area.join('·') + ')']; }), '')) + '<div class="fg full"><span class="lb">관심 있는 것 (여러 개 가능)</span><div class="cks">' + wants.map(function (w) { return '<label class="chk"><input type="checkbox" name="po-w" value="' + w + '"> ' + w + '</label>'; }).join('') + '</div></div></div>' +
-      '<label class="chk"><input type="checkbox" id="po-a"><span><b>[필수]</b> 오픈 안내를 위해 이름·휴대폰 번호·동네를 받는 데 동의해요. 오픈 후 3개월이 지나면 가입하지 않은 분의 정보는 지워요.</span></label><p class="err" id="po-e" hidden></p><button class="btn btn-fill btn-block" type="submit">창립회원 신청하기</button></form>';
-    return page('창립회원 사전 신청', G.pageHead('우리 동네 품온,<br>창립회원이 되어 주세요', '동네마다 50명이 모이면 품온을 열어요. 창립회원에게는 첫 3개월 LIFE START 혜택과 창립회원 배지를 드려요.', [['우리 동네', 'town'], ['사전 신청']], 'FOUNDING MEMBERS'),
-      townTabs('preorder') + '<div class="two"><div><ul class="mt-bars big">' + bars + '</ul><div class="callout">' + ico('gift', 20) + '<div><strong>창립회원 혜택</strong><p>첫 3개월 LIFE START 무료 · 창립회원 배지 · 오픈 기념 나눔데이 초대</p></div></div></div>' + form + '</div>');
+    var my = S.user ? G.memInfo(uid()).branch : '';
+    var form = '<form class="card form" data-sub="preSave" novalidate><h2 class="h3">우리 동네 품온 열릴 때 알려주세요</h2><div class="fgrid">' + fg('po-n', '이름', '<input id="po-n" autocomplete="name" value="' + esc(S.user ? S.user.name : '') + '">') + fg('po-p', '휴대폰 번호', '<input id="po-p" type="tel" inputmode="tel" placeholder="010-0000-0000">') +
+      fg('po-b', '우리 동네', sel('po-b', T().branches.map(function (b) { return [b.id, b.name + ' (' + b.area.join('·') + ')']; }), my)) + '<div class="fg full"><span class="lb">관심 있는 것 (여러 개 가능)</span><div class="cks">' + wants.map(function (w) { return '<label class="chk"><input type="checkbox" name="po-w" value="' + w + '"> ' + w + '</label>'; }).join('') + '</div></div></div>' +
+      '<label class="chk"><input type="checkbox" id="po-a"><span><b>[필수]</b> 동네 개설 알림을 받기 위해 이름·휴대폰 번호·동네를 받는 데 동의해요. 연락처는 개설 알림에만 쓰고, 개설 후 3개월이 지나면 가입하지 않은 분의 정보는 지워요.</span></label><p class="err" id="po-e" hidden></p><button class="btn btn-fill btn-block" type="submit">창립회원 신청하기</button></form>';
+    return page('창립회원 사전 신청', G.pageHead('우리 동네 품온,<br>창립회원이 되어 주세요', '동네마다 ' + G.PRE_GOAL + '명이 모이면 품온을 열어요. 먼저 신청한 창립회원 100인에게는 평생 창립 배지와 첫해 회비 할인을 드려요.', [['우리 동네', 'town'], ['사전 신청']], 'FOUNDING MEMBERS'),
+      townTabs('preorder') + '<div class="two"><div><ul class="mt-bars big">' + bars + '</ul><p class="small">지금까지 ' + tot + '명이 신청했어요 · 창립회원 남은 자리 ' + Math.max(0, 100 - tot) + '명</p><div class="callout">' + ico('gift', 20) + '<div><strong>창립회원 100인 혜택</strong><p>평생 \'창립\' 배지 · 첫해 회비 할인 · 개설 기념 나눔데이 초대</p></div></div></div>' + form + '</div>');
   };
   G.SUB.preSave = function () {
     var n = val('po-n'), p = val('po-p'), w = Array.prototype.map.call(document.querySelectorAll('[name=po-w]:checked'), function (x) { return x.value; }), e = $('po-e');
     var err = !n ? '이름을 적어 주세요.' : !/^01\d-?\d{3,4}-?\d{4}$/.test(p) ? '휴대폰 번호를 010-0000-0000처럼 적어 주세요.' : !w.length ? '관심 있는 것을 하나 이상 골라 주세요.' : !$('po-a').checked ? '필수 동의에 체크해 주세요.' : '';
     if (err) { e.textContent = err; e.hidden = false; return; }
-    T().preorders.unshift({ id: 'R' + (T().preorders.length + 10), name: n.charAt(0) + '*' + n.slice(-1), phone: p.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, '$1-****-$3'), branch: val('po-b'), want: w, at: G.now() });
-    G.log('창립회원 사전 신청: ' + val('po-b')); G.save(); G.toast('사전 신청을 받았어요. 오픈하면 문자로 알려 드릴게요.'); G.rerender();
+    var masked = p.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, '$1-****-$3');
+    if (T().preorders.some(function (r) { return r.phone === masked && r.branch === val('po-b'); })) { e.textContent = '이미 이 동네에 신청한 번호예요.'; e.hidden = false; return; }
+    T().preorders.unshift({ id: 'R' + (T().preorders.length + 10), name: n.charAt(0) + '*' + n.slice(-1), phone: masked, branch: val('po-b'), want: w, at: G.now(), user: uid() || '' });
+    G.log('창립회원 사전 신청: ' + val('po-b')); G.save(); G.toast('사전 신청을 받았어요. 동네가 열리면 문자로 알려 드릴게요.'); G.rerender();
   };
 
   /* ================= 모임 · 이벤트 ================= */
@@ -220,7 +265,7 @@
   var TG = ['보호가 필요한 아동', '혼자 사시는 어르신', '한부모·미혼모 가정', '소년소녀 가장', '경제적 어려움이 큰 이웃', '장애가 있는 이웃'];
   var tgF = '';
   var org = function (id) { return byId(T().orgs, id) || {}; };
-  function gTabs(cur) { var t = [['giving', '나눔 사업'], ['giving-thegarnet', '더가넷 나눔'], ['giving-maeum', '마음품']]; if (f('givingNominate')) t.push(['giving-nominate', '추천·신청']); if (f('givingReport')) t.push(['giving-report', '나눔 보고서']); if (S.user) t.push(['my-giving', '나의 나눔']); return '<div class="tabs">' + t.map(function (x) { return '<a href="#' + x[0] + '" class="' + (cur === x[0] ? 'on' : '') + '">' + x[1] + '</a>'; }).join('') + '</div>'; }
+  function gTabs(cur) { var t = [['giving', '나눔 사업'], ['giving-thegarnet', '더가넷 나눔'], ['giving-maeum', '마음품']]; if (f('campaign')) t.push(['giving-campaign', '공동 캠페인']); if (f('givingNominate')) t.push(['giving-nominate', '추천·신청']); if (f('givingReport')) t.push(['giving-report', '나눔 보고서']); if (S.user) t.push(['my-giving', '나의 나눔']); return '<div class="tabs">' + t.map(function (x) { return '<a href="#' + x[0] + '" class="' + (cur === x[0] ? 'on' : '') + '">' + x[1] + '</a>'; }).join('') + '</div>'; }
   function pCard(p) {
     var r = G.projRaised(p.id), pct = Math.min(100, Math.round(r / p.goal * 100));
     return '<article class="card gv" data-t="' + esc(p.target) + '"><p class="meta"><span class="tag">' + esc(p.target) + '</span><span class="bd bd-' + (p.status === '모금 중' ? 'info' : 'ok') + '">' + esc(p.status) + '</span></p><h3><a href="#give-' + p.id + '">' + esc(p.title) + '</a></h3><p class="small">' + ico('shield', 14) + ' ' + esc(org(p.org).name) + ' · 검증 기관 · 영수증은 기관 발급</p>' +
@@ -230,15 +275,30 @@
     if (!f('giving')) return P.svc('S15');
     if (arg === 'thegarnet') return givingGarnet();
     if (arg === 'maeum') return givingMaeum();
-    if (arg === 'nominate') return f('givingNominate') ? nominatePage() : offPage('나눔 추천');
+    if (arg === 'nominate' || arg === 'nominate-self') return f('givingNominate') ? nominatePage(arg === 'nominate-self') : offPage('나눔 추천');
     if (arg === 'report') return f('givingReport') ? reportPage() : offPage('나눔 보고서');
-    var l = T().projects.filter(function (p) { return !tgF || p.target === tgF; });
+    if (arg === 'campaign') return f('campaign') ? campaignPage() : offPage('공동 캠페인');
+    var l = T().projects.filter(function (p) { return (!tgF || p.target === tgF) && (!rgF || p.branch === rgF); });
+    var rg = '<div class="chips">' + [['', '모든 지역']].concat(T().branches.map(function (b) { return [b.id, b.area[0] + ' 동네']; })).map(function (c) { return '<button class="chip' + (rgF === c[0] ? ' on' : '') + '" data-act="rgF" data-v="' + c[0] + '">' + esc(c[1]) + '</button>'; }).join('') + '</div>';
+    var help = '<div class="gv-help"><a class="btn btn-line" href="#' + (f('givingNominate') ? 'giving-nominate' : 'inquiry') + '">' + ico('users', 18) + ' 도움이 필요한 이웃 알리기</a><a class="btn btn-ghost" href="#' + (f('givingNominate') ? 'giving-nominate-self' : 'inquiry') + '">' + ico('lock', 18) + ' 나도 도움이 필요해요 (비공개)</a><p class="small">생명·안전이 급한 상황이면 기다리지 말고 <a class="lnk-i" href="tel:119">119</a>, 복지 상담은 <a class="lnk-i" href="tel:129">129</a>, 가까운 주민센터로 바로 연락하세요. 더가넷은 긴급 구호 기관이 아니에요.</p></div>';
     return page('나눔', G.pageHead('나눔이 어디에 닿는지<br>끝까지 보여 드려요', '검증한 기관이 도움이 필요한 분을 정하고, 모인 돈이 전달·집행되는 과정을 장부로 공개해요. 개인의 이름과 얼굴은 공개하지 않아요.', [['나눔']], 'GIVING'),
-      gTabs('giving') + '<div class="chips">' + [''].concat(TG).map(function (t) { return '<button class="chip' + (tgF === t ? ' on' : '') + '" data-act="tgF" data-v="' + esc(t) + '">' + esc(t || '모든 대상') + '</button>'; }).join('') + '</div>' +
+      gTabs('giving') + help + rg + '<div class="chips">' + [''].concat(TG).map(function (t) { return '<button class="chip' + (tgF === t ? ' on' : '') + '" data-act="tgF" data-v="' + esc(t) + '">' + esc(t || '모든 대상') + '</button>'; }).join('') + '</div>' +
       (l.length ? '<div class="gv-grid">' + l.map(pCard).join('') + '</div>' : G.empty('이 대상의 나눔 사업이 아직 없어요.')) +
       '<div class="callout">' + ico('info', 20) + '<div><strong>왜 받는 분을 직접 고를 수 없나요?</strong><p>도움을 받는 분의 사생활과 안전을 지키기 위해, 사실 확인과 선정은 검증한 기관이 해요. 회원은 대상과 사업을 골라 함께하고, 결과는 보고서로 확인해요. (시연 화면에서는 실제 후원금이 오가지 않아요.)</p></div></div>');
   };
   G.ACT.tgF = function (el) { tgF = el.dataset.v; G.rerender(); };
+  var rgF = ''; G.ACT.rgF = function (el) { rgF = el.dataset.v; G.rerender(); };
+  function campaignPage() {
+    var l = T().campaigns || [];
+    return page('공동 캠페인', G.pageHead('함께 모으는 공동 캠페인', '더가넷·검증 기관·회원이 같은 목표를 함께 채워요. 돈은 기관 계좌로, 물건은 거점으로, 손길은 품온으로 보태요.', [['나눔', 'giving'], ['공동 캠페인']], 'CAMPAIGN'),
+      gTabs('giving-campaign') + (l.length ? l.map(function (c) {
+        var n = c.base + Object.keys(c.joined).length, o = byId(T().orgs, c.org) || {}, mine = S.user && c.joined[uid()];
+        return '<article class="card cp"><p class="meta"><span class="bd bd-info">' + esc(o.name || '') + ' 함께</span><span class="small">' + c.until + '까지</span></p><h3>' + esc(c.title) + '</h3><div class="ft-bar"><i style="width:' + Math.min(100, Math.round(n / c.goal * 100)) + '%"></i></div><p class="gv-n"><b>' + n + c.unit + '</b> <span class="small">/ ' + c.goal + c.unit + '</span></p><p class="small">' + ico('gift', 14) + ' ' + esc(c.garnet) + '</p>' +
+          '<ul class="ul">' + c.ways.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul>' +
+          (!S.user ? '<a class="btn btn-line btn-sm" href="#login">로그인하고 함께하기</a>' : mine ? '<p class="small">' + ico('check', 14) + ' "' + esc(mine) + '"(으)로 함께하고 있어요.</p>' : '<div class="fa">' + [['돈', 'give-' + c.proj], ['물건', 'club-new'], ['손길', 'club']].map(function (w) { return '<button class="btn btn-line btn-sm" data-act="cpJoin" data-id="' + c.id + '" data-v="' + w[0] + '" data-to="' + w[1] + '">' + w[0] + '으로 함께하기</button>'; }).join('') + '</div>') + '</article>';
+      }).join('') : G.empty('진행 중인 캠페인이 없어요.')) + '<p class="small mt">캠페인 모금도 기관 계좌로 바로 가고, 기부금 영수증은 기관이 발급해요. 회원 사이 현금 지원은 하지 않아요.</p>');
+  }
+  G.ACT.cpJoin = function (el) { var c = byId(T().campaigns, el.dataset.id); c.joined[uid()] = el.dataset.v; G.log('공동 캠페인 참여: ' + c.id + ' ' + el.dataset.v); G.save(); G.toast(el.dataset.v + '으로 함께해 주셔서 고마워요.'); G.go(el.dataset.to); };
   function givingGarnet() {
     var c = T().giveCfg, sum = function (w) { return T().ledger.filter(function (x) { return x.type === '모금' && x.who === w; }).reduce(function (s, x) { return s + x.amt; }, 0); };
     return page('더가넷 나눔', G.pageHead('더가넷이 직접 하는 나눔', '회원 후원과 별도로, 더가넷이 매출 일부와 손길을 나눠요. 더가넷 돈과 회원 후원금은 장부에서 따로 보여요.', [['나눔', 'giving'], ['더가넷 나눔']], 'OUR SHARE'),
@@ -258,14 +318,21 @@
     var form = p.status !== '모금 중' ? '<p class="hold">모금이 끝난 사업이에요. 아래에서 결과를 확인하세요.</p>' : !S.user ? needLogin('give-' + id) :
       '<form data-sub="giveSave" data-id="' + id + '" novalidate><div class="pills amt">' + [10000, 30000, 50000, 100000].map(function (a, i) { return '<label class="pill"><input type="radio" name="gv-a" value="' + a + '"' + (i === 1 ? ' checked' : '') + '><span>' + (a / 10000) + '만 원</span></label>'; }).join('') + '</div>' + fg('gv-x', '직접 입력 (원)', '<input id="gv-x" type="number" min="1000" step="1000" placeholder="비우면 위 금액">') +
       '<div class="pills">' + [['일시', '한 번'], ['정기', '매달']].map(function (k, i) { return '<label class="pill"><input type="radio" name="gv-k" value="' + k[0] + '"' + (i === 0 ? ' checked' : '') + '><span>' + k[1] + '</span></label>'; }).join('') + '</div><label class="chk"><input type="checkbox" id="gv-o"> 후원자 명단에 이름(가운데 가림)을 공개해요</label>' +
-      '<label class="chk"><input type="checkbox" id="gv-g"><span><b>[필수]</b> 후원금은 ' + esc(o.name) + ' 공식 계좌로 바로 가고, 기부금 영수증은 기관이 발급한다는 것을 확인했어요. 기관에 영수증 발급용 이름·연락처가 제공돼요.</span></label><p class="err" id="gv-e" hidden></p><button class="btn btn-fill btn-block" type="submit">함께하기 (시연)</button>' + (left ? '<p class="small">지금 후원하면 더가넷이 같은 금액을 더해요 (남은 매칭 ' + G.fmt(left) + ').</p>' : '<p class="small">이 사업의 매칭 한도가 다 찼어요.</p>') + '</form>';
+      '<label class="chk"><input type="checkbox" id="gv-g"><span><b>[필수]</b> 후원금은 ' + esc(o.name) + ' 공식 계좌로 바로 가고, 기부금 영수증은 기관이 발급한다는 것을 확인했어요. 기관에 영수증 발급용 이름·연락처가 제공돼요.</span></label><p class="err" id="gv-e" hidden></p><button class="btn btn-fill btn-block" type="submit">함께하기 (시연)</button>' + (f('points') && G.pointBal(uid()) >= 1000 ? '<button class="btn btn-line btn-block" type="button" data-act="ptGive" data-id="' + id + '">포인트 ' + G.pointBal(uid()).toLocaleString('ko-KR') + 'P 기부하기</button><p class="small">포인트 기부는 같은 금액을 더가넷 이름으로 기관에 기부해요(영수증은 더가넷이 받아요).</p>' : '') + (left ? '<p class="small">지금 후원하면 더가넷이 같은 금액을 더해요 (남은 매칭 ' + G.fmt(left) + ').</p>' : '<p class="small">이 사업의 매칭 한도가 다 찼어요.</p>') + '</form>';
     return { title: p.title, html: '<section class="sd"><div class="wrap"><nav class="crumb crumb-row" aria-label="현재 위치"><a href="#home">홈</a><a href="#giving">나눔</a><span>' + esc(p.title) + '</span></nav><div class="sd-in"><div><p class="meta"><span class="tag">' + esc(p.target) + '</span><span class="bd bd-info">' + esc(p.status) + '</span></p><h1 class="h2">' + esc(p.title) + '</h1>' +
       '<div class="blk"><h2>이야기</h2><p class="prose">' + G.nl(p.story) + '</p></div>' +
       '<div class="blk"><h2>함께하는 기관</h2><dl class="sum"><div class="kv"><dt>기관</dt><dd>' + esc(o.name) + ' <span class="bd bd-ok">검증 ' + esc(o.verified) + '</span></dd></div><div class="kv"><dt>유형</dt><dd>' + esc(o.type) + '</dd></div><div class="kv"><dt>기부금 영수증</dt><dd>' + (o.receipt ? '기관이 발급해요' : '발급 불가') + '</dd></div><div class="kv"><dt>받는 분 선정</dt><dd>기관이 사실을 확인해 정해요</dd></div></dl></div>' +
       '<div class="blk"><h2>사용 계획</h2><table class="tbl"><tbody>' + p.plan.map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="r">' + G.fmt(x[1]) + '</td></tr>'; }).join('') + '<tr class="tot"><td>목표</td><td class="r">' + G.fmt(p.goal) + '</td></tr></tbody></table></div>' +
-      '<div class="blk"><h2>돈의 흐름</h2><ol class="gv-flow">' + flow.map(function (x) { return '<li><span>' + x[0] + '</span><b>' + G.fmt(x[1]) + '</b></li>'; }).join('') + '</ol><table class="tbl"><thead><tr><th>날짜</th><th>구분</th><th>출처</th><th class="r">금액</th><th>메모</th></tr></thead><tbody>' + led.map(function (x) { return '<tr><td>' + x.at + '</td><td>' + x.type + '</td><td>' + x.who + '</td><td class="r">' + G.fmt(x.amt) + '</td><td>' + esc(x.note) + '</td></tr>'; }).join('') + '</tbody></table><p class="small">장부를 고치면 이유와 함께 변경 기록이 남아요.</p></div>' +
+      '<div class="blk"><h2>돈의 흐름</h2><p class="small">플랫폼 수수료 <b>0원</b> · 후원 주체별: 회원 ' + G.fmt(led.filter(function (x) { return x.type === '모금' && x.who === '회원'; }).reduce(function (s0, x) { return s0 + x.amt; }, 0)) + ' · 더가넷 ' + G.fmt(led.filter(function (x) { return x.type === '모금' && (x.who === '더가넷' || x.who === '포인트'); }).reduce(function (s0, x) { return s0 + x.amt; }, 0)) + ' · 매칭 ' + G.fmt(mt) + '</p><ol class="gv-flow">' + flow.map(function (x) { return '<li><span>' + x[0] + '</span><b>' + G.fmt(x[1]) + '</b></li>'; }).join('') + '</ol><table class="tbl"><thead><tr><th>날짜</th><th>구분</th><th>출처</th><th class="r">금액</th><th>메모</th></tr></thead><tbody>' + led.map(function (x) { return '<tr><td>' + x.at + '</td><td>' + x.type + '</td><td>' + x.who + '</td><td class="r">' + G.fmt(x.amt) + '</td><td>' + esc(x.note) + '</td></tr>'; }).join('') + '</tbody></table><p class="small">장부를 고치면 이유와 함께 변경 기록이 남아요.</p></div>' +
       (rep && rep.approved ? '<div class="blk"><h2>결과 보고</h2><div class="callout">' + ico('check', 20) + '<div><strong>' + esc(o.name) + ' 보고 · ' + rep.approved + '</strong><p>' + G.nl(rep.text) + '</p></div></div></div>' : '') +
       '</div><aside class="sd-aside"><div class="buy"><p class="buy-k">' + esc(p.target) + '</p><h2>' + G.fmt(r) + '</h2><div class="ft-bar"><i style="width:' + Math.min(100, Math.round(r / p.goal * 100)) + '%"></i></div><p class="small">목표 ' + G.fmt(p.goal) + ' · ' + p.until + ' 마감</p>' + form + '</div></aside></div></div></section>' };
+  };
+  G.ACT.ptGive = function (el) {
+    var id = el.dataset.id, p = byId(T().projects, id), amt = Math.floor(G.pointBal(uid()) / 1000) * 1000; if (!amt) return;
+    G.addPoint(uid(), '포인트 기부: ' + p.title, -amt);
+    T().gifts.unshift({ id: 'GF' + (T().gifts.length + 10), user: uid(), proj: id, amt: 0, point: amt, match: 0, kind: '포인트', open: false, at: G.now() });
+    T().ledger.push({ id: 'L' + Date.now() % 100000, proj: id, at: SITE.today, type: '모금', who: '포인트', amt: amt, note: '회원 포인트 기부 (더가넷 이름)' });
+    G.notify(uid(), '[더가넷] 포인트 ' + amt.toLocaleString('ko-KR') + 'P를 "' + p.title + '"에 기부했어요.'); G.log('포인트 기부: ' + id + ' ' + amt); G.save(); G.toast('포인트를 기부했어요.'); G.go('my-giving');
   };
   G.SUB.giveSave = function (fm) {
     var id = fm.dataset.id, p = byId(T().projects, id), a = +val('gv-x') || +(document.querySelector('[name=gv-a]:checked') || {}).value, k = (document.querySelector('[name=gv-k]:checked') || {}).value, e = $('gv-e');
@@ -278,16 +345,26 @@
     G.notify(uid(), '[더가넷] "' + p.title + '"에 ' + G.fmt(a) + ' 함께해 주셨어요' + (m ? ' (더가넷 매칭 ' + G.fmt(m) + ')' : '') + '. 전달·집행되면 알려 드릴게요.');
     G.log('나눔 후원(시연): ' + id + ' ' + G.fmt(a)); G.save(); G.toast('고마워요. 나의 나눔에서 흐름을 볼 수 있어요.'); G.go('my-giving');
   };
-  function nominatePage() {
-    var form = !S.user ? needLogin('giving-nominate') : '<form class="card form" data-sub="nomSave" novalidate><div class="pills">' + ['이웃 추천', '본인 신청'].map(function (k, i) { return '<label class="pill"><input type="radio" name="nm-k" value="' + k + '"' + (i === 0 ? ' checked' : '') + '><span>' + k + '</span></label>'; }).join('') + '</div><div class="fgrid">' + fg('nm-t', '어떤 분인가요', sel('nm-t', TG, '')) + fg('nm-o', '연결할 기관', sel('nm-o', T().orgs.map(function (o) { return [o.id, o.name]; }), '')) + fg('nm-x', '상황 설명 (이름·주소·연락처는 적지 마세요)', '<textarea id="nm-x" rows="4"></textarea>', 'full') + '</div><label class="chk"><input type="checkbox" id="nm-c"><span><b>[필수]</b> (이웃 추천이면) 추천받는 분께 기관 연락에 대한 동의를 받았어요.</span></label><p class="err" id="nm-e" hidden></p><button class="btn btn-fill btn-block" type="submit">보내기</button></form>';
-    return page('나눔 추천·신청', G.pageHead('도움이 필요한 이웃을 알려 주세요', '추천과 본인 신청은 기관이 먼저 사실을 확인하고, 외부 위원이 함께하는 심사위원회가 결정해요. 결과는 신청한 분에게만 알려요.', [['나눔', 'giving'], ['추천·신청']], 'NOMINATE'),
-      gTabs('giving-nominate') + '<div class="two"><div><ol class="proc">' + [['접수', '이름 없이 상황만 받아요.'], ['기관 확인', '연결 기관이 직접 연락해 사실을 확인해요.'], ['심사', '심사위원회(3인 이상)가 기준표로 정해요.'], ['선정·지원', '선정되면 기관 사업으로 지원해요.']].map(function (s, i) { return '<li><span class="proc-n">' + (i + 1) + '</span><h3>' + s[0] + '</h3><p>' + s[1] + '</p></li>'; }).join('') + '</ol></div>' + form + '</div>');
+  var NM_ST = ['추천 접수', '기관 확인', '위원회 심사', '지원 계획', '전달', '점검·종결'];
+  G.NM_ST = NM_ST;
+  function nominatePage(self) {
+    var urgent = '<div class="callout warn">' + ico('info', 20) + '<div><strong>급한 상황이면 기다리지 마세요</strong><p>생명·안전이 걸린 일은 <a class="lnk-i" href="tel:119">119</a>, 복지 상담은 <a class="lnk-i" href="tel:129">129</a>, 가까운 주민센터로 바로 연락하세요. 나눔 심사는 시간이 걸리고, 더가넷은 긴급 구호 기관이 아니에요.</p></div></div>';
+    var form = !S.user ? needLogin('giving-nominate') : '<form class="card form" data-sub="nomSave" novalidate><div class="pills">' + ['이웃 추천', '본인 신청 (비공개)'].map(function (k, i) { return '<label class="pill"><input type="radio" name="nm-k" value="' + k + '"' + ((self ? i === 1 : i === 0) ? ' checked' : '') + '><span>' + k + '</span></label>'; }).join('') + '</div><div class="fgrid">' +
+      fg('nm-t', '어떤 상황인가요', sel('nm-t', TG, '')) + fg('nm-o', '연결할 기관', sel('nm-o', T().orgs.map(function (o) { return [o.id, o.name]; }), '')) + fg('nm-u', '급한 정도', sel('nm-u', ['한 달 안에', '석 달 안에', '천천히'], '')) +
+      fg('nm-x', '상황 설명 (이름·주소·연락처·소득·건강 정보는 적지 마세요)', '<textarea id="nm-x" rows="4"></textarea>', 'full') + '</div>' +
+      '<label class="chk"><input type="checkbox" id="nm-c"><span><b>[필수]</b> 이웃 추천이면 추천받는 분께 기관 연락 동의를 받았어요. (만 14세 미만은 법정대리인 동의)</span></label>' +
+      '<label class="chk"><input type="checkbox" id="nm-g"><span><b>[필수]</b> 추천 보상은 없고, 지원받은 물품·서비스는 다른 사람에게 주거나 팔지 않는다는 데 동의해요.</span></label><p class="err" id="nm-e" hidden></p><button class="btn btn-fill btn-block" type="submit">보내기</button><p class="small">본인 신청은 본인과 나눔 담당자만 봐요. 배지나 활동 기록에 흔적이 남지 않고, 공공 지원(긴급복지지원 등)을 먼저 연결해 드려요.</p></form>';
+    var mine = S.user ? T().nominations.filter(function (n) { return n.by === uid(); }) : [];
+    return page('나눔 추천·신청', G.pageHead(self ? '도움이 필요하다고 알려 주세요' : '도움이 필요한 이웃을 알려 주세요', '추천은 누구나, 확인은 협약 기관, 결정은 외부 위원이 과반인 위원회, 전달은 기관이 해요. 결과는 신청한 분에게만 알려요.', [['나눔', 'giving'], ['추천·신청']], 'NOMINATE'),
+      gTabs('giving-nominate') + urgent + '<div class="two"><div><ol class="proc nm-proc">' + [['추천', '이름 없이 상황만 받아요.'], ['기관 확인', '주민센터·복지관이 사실과 중복 지원을 확인해요.'], ['위원회 심사', '외부 위원 과반, 공개 기준표, 이해충돌 위원은 빠져요.'], ['지원 계획', '기관이 무엇을 언제까지 지원할지 정해요.'], ['전달', '물품·서비스 우선, 현금은 기관이 집행해요.'], ['점검·종결', '6개월마다 다시 확인하고 익명 결과를 공개해요.']].map(function (s0, i) { return '<li><span class="proc-n">' + (i + 1) + '</span><h3>' + s0[0] + '</h3><p>' + s0[1] + '</p></li>'; }).join('') + '</ol></div>' + form + '</div>' +
+      (mine.length ? '<h2 class="h3 gap">내가 보낸 추천·신청</h2><ul class="mng">' + mine.map(function (n) { return '<li><div><b>' + esc(n.kind) + ' · ' + esc(n.target) + '</b><small>' + n.at + ' · ' + esc(n.st) + '</small></div></li>'; }).join('') + '</ul>' : ''));
   }
   G.SUB.nomSave = function () {
     var x = val('nm-x'), e = $('nm-e'), k = (document.querySelector('[name=nm-k]:checked') || {}).value;
-    var err = x.length < 15 ? '상황을 15자 이상 적어 주세요.' : /(010-?\d{3,4}|\d{6}-\d|[가-힣]+(동|로|길)\s?\d+)/.test(x) ? '연락처·주민번호·자세한 주소는 적지 말아 주세요. 기관이 직접 확인해요.' : (k === '이웃 추천' && !$('nm-c').checked) ? '추천받는 분의 동의를 먼저 받아 주세요.' : '';
+    var dup = T().nominations.some(function (n) { return n.by === uid() && n.text === x; });
+    var err = x.length < 15 ? '상황을 15자 이상 적어 주세요.' : /(010-?\d{3,4}|\d{6}-\d|[가-힣]+(동|로|길)\s?\d+)/.test(x) ? '연락처·주민번호·자세한 주소는 적지 말아 주세요. 기관이 직접 확인해요.' : (k === '이웃 추천' && !$('nm-c').checked) ? '추천받는 분의 동의를 먼저 받아 주세요.' : !$('nm-g').checked ? '필수 동의에 체크해 주세요.' : dup ? '같은 내용을 이미 보냈어요.' : '';
     if (err) { e.textContent = err; e.hidden = false; return; }
-    T().nominations.unshift({ id: 'NM' + (T().nominations.length + 1), kind: k, target: val('nm-t'), org: val('nm-o'), text: x, by: uid(), at: SITE.today, st: '접수' });
+    T().nominations.unshift({ id: 'NM' + (T().nominations.length + 1), kind: k, target: val('nm-t'), org: val('nm-o'), urgent: val('nm-u'), text: x, by: uid(), at: SITE.today, st: NM_ST[0], coi: [] });
     G.log('나눔 ' + k + ' 접수'); G.save(); G.toast('보냈어요. 기관이 확인하면 알려 드릴게요.'); G.rerender();
   };
   function reportPage() {
@@ -335,6 +412,10 @@
   P.apply = function (id) {
     if (id === 'S15' && f('fixGiving')) return page('기부·후원', G.pageHead('기부·후원은 신청서로 받지 않아요', '후원금은 더가넷 매출이 아니어서 견적·결제 대신 검증 기관의 공식 창구로 연결해요.', [['서비스 신청', 'apply'], ['기부·후원']]), '<div class="fa">' + (f('giving') ? '<a class="btn btn-fill" href="#giving">나눔 사업 보기</a>' : '<a class="btn btn-fill" href="#inquiry">1:1 문의로 기관 안내 받기</a>') + '<a class="btn btn-line" href="#svc-S15">서비스 안내로</a></div>');
     var o = oApply(id);
+    if (id && o.html && SIZE_SVC.indexOf(id) >= 0 && S.drafts[id] && S.drafts[id].step === 1) {
+      var c0 = S.drafts[id].c, ps = sizeText();
+      o.html = ins(o.html, '<div class="fg"><label class="lb" for="c-budget">', '<div class="fg full sz-box"><span class="lb">사이즈 <em class="opt">선택</em></span>' + (S.user ? (ps ? '<label class="chk"><input type="checkbox" data-on="change:sizeShare" data-id="' + id + '"' + (c0.sizeShare ? ' checked' : '') + '><span>내 프로필 사이즈를 이 신청에 함께 보내요 <b>(' + esc(ps) + ')</b></span></label>' : '<p class="small">프로필에 저장된 사이즈가 없어요. <a class="lnk-i" href="#my-profile">마이 라이프 프로필</a>에 적어 두면 다음부터 체크 한 번으로 보낼 수 있어요.</p>') : '') + '<input id="c-gsz" placeholder="선물 받는 분 사이즈 (예: 반지 12호, 의류 66) · 저장하지 않아요" value="' + esc(c0.giftSize || '') + '" data-k="giftSize" data-on="input:drc2"></div>');
+    }
     if (id && o.html && f('regular') && S.drafts[id] && S.drafts[id].step === 1) {
       var c = S.drafts[id].c, prev = T().staff.filter(function (w) { return S.apps.some(function (a) { return a.user === uid() && T().appStaff[a.no] === w.id; }); });
       o.html = ins(o.html, '<div class="fg"><label class="lb" for="c-budget">', '<div class="fg"><label class="lb" for="c-reg">정기 예약 <em class="opt">선택</em></label>' + sel('c-reg', [['', '한 번만'], ['매주', '매주'], ['격주', '격주'], ['매월', '매월']], c.regular || '', ' data-k="regular" data-on="change:drc2"') + '</div><div class="fg"><label class="lb" for="c-stf">담당자 지정 요청 <em class="opt">선택</em></label>' + sel('c-stf', [['', '요청 없음']].concat(prev.map(function (w) { return [w.name + ' ' + w.role, '지난번 ' + w.name + ' ' + w.role]; })), c.staffReq || '', ' data-k="staffReq" data-on="change:drc2"') + '</div>');
@@ -345,9 +426,23 @@
   G.ACT.asubmit = function (el) {
     var id = el.dataset.id, d = S.drafts[id], c = d ? JSON.parse(JSON.stringify(d.c)) : {}, before = S.apps.length;
     oSubmit(el);
-    if (S.apps.length > before) { var a = S.apps[0]; if (f('regular') && (c.regular || c.staffReq)) a.regular = { cycle: c.regular || '한 번', staff: c.staffReq || '' }; G.notify(a.user, '[더가넷] ' + G.sv(a.svc).name + ' 신청을 받았어요. 신청번호 ' + a.no); G.save(); }
+    if (S.apps.length > before) { var a = S.apps[0];
+      if (c.sizeShare && sizeText()) a.data['내 사이즈 (프로필)'] = sizeText();
+      if (c.giftSize) a.data['받는 분 사이즈'] = c.giftSize; if (f('regular') && (c.regular || c.staffReq)) a.regular = { cycle: c.regular || '한 번', staff: c.staffReq || '' }; G.notify(a.user, '[더가넷] ' + G.sv(a.svc).name + ' 신청을 받았어요. 신청번호 ' + a.no); G.save(); }
   };
 
+  var SIZE_SVC = ['S13', 'S07', 'S09', 'S05'];
+  function sizeText() { var p = S.profile || {}, l = []; if (p.clothes) l.push('의류 ' + p.clothes); if (p.shoe) l.push('신발 ' + p.shoe + 'mm'); if (p.ring) l.push('반지 ' + p.ring + '호'); if (p.color) l.push('좋아하는 색 ' + p.color); return l.join(' · '); }
+  G.sizeText = sizeText;
+  G.INP.sizeShare = function (el) { var d = S.drafts[el.dataset.id]; if (d) { d.c.sizeShare = el.checked; G.save(); } };
+  var oSpecial = P.special;
+  P.special = function () {
+    var o = oSpecial(), t = sizeText();
+    var box = '<div class="card sz-card"><h3>' + ico('user', 18) + ' 내 사이즈</h3>' + (!S.user ? '<p class="small">로그인하면 의류·신발·반지 사이즈를 저장해 두고, 선물·주얼리 신청서에서 체크 한 번으로 보낼 수 있어요.</p><a class="btn btn-line btn-sm" href="#login" data-act="setRet" data-ret="special">로그인</a>' :
+      (t ? '<p>' + esc(t) + '</p><a class="btn btn-line btn-sm" href="#my-profile">사이즈 고치기</a>' : '<p class="small">아직 저장한 사이즈가 없어요.</p><a class="btn btn-fill btn-sm" href="#my-profile">사이즈 입력하기</a>')) + '<p class="small mt">선물 받는 분 사이즈는 신청서에만 적고 저장하지 않아요.</p></div>';
+    o.html = o.html.replace('<aside class="sp-side">', '<aside class="sp-side">' + box);
+    return o;
+  };
   var oHome = P.home;
   P.home = function () {
     var o = oHome(), tiles = [];
@@ -411,7 +506,7 @@
     if (cc && f('corp') && !corp) { G.toast('복지 코드를 찾을 수 없어요. 다시 확인해 주세요.'); return; }
     var before = S.joined && S.joined.name; oSign(fm);
     if (S.joined && S.user === S.joined) {
-      var m = G.memInfo(S.joined.id); m.type = type; m.branch = br; m.verified = false; if (extra) m.extra = extra; if (corp) { m.corp = corp.id; corp.used++; m.plan = 1; }
+      var m = G.memInfo(S.joined.id); m.type = type; m.branch = br; m.verified = false; if (extra) m.extra = extra; if (corp) { m.corp = corp.id; corp.used++; m.plan = Math.max(1, m.plan || 0); S.plan = Math.max(1, S.plan || 0); }
       if (extra && f('corp')) T().corps.push({ id: 'C' + (T().corps.length + 1), kind: type === '기업' ? '기업' : '기관', name: extra['기업·기관명'], bizNo: extra['사업자·고유번호'], ceo: extra['대표자'], bizType: extra['업종'], addr: extra['주소'], manager: extra['담당자'], phone: val('s-ph'), email: S.joined.email, seats: 0, period: '심사 중', code: '', used: 0, pending: true });
       G.save();
     }

@@ -59,13 +59,16 @@
       ['timePum', '시간품(현금 전환 불가)'],
       ['memberMeet', '회원 주최 모임'],
       ['givingNominate', '나눔 추천·본인 신청·심사위원회'],
-      ['regular', '정기 예약·담당자 지정 요청'],
+      ['regular', '정기 예약·담당자 지정·할부·결제 영수증'],
+      ['gps', '내 위치로 가까운 거점 찾기 (위치정보 동의)'],
+      ['campaign', '공동 캠페인 (더가넷·기관·회원)'],
+      ['neighborCare', '안부 이웃 (이웃이 안부 전화·방문)'],
       ['pwa', '홈 화면에 추가 안내']] }
   ];
   var DEPS = { pumonCheck: ['pumon'], places: ['branches'], hubOps: ['places', 'pumon'], preorder: ['branches'], localBadge: ['branches', 'pumon'],
     trial3: ['memberLink', 'pumon'], gradeFee: ['memberLink', 'pumon'], branchManager: ['branches'], corp: ['memberTypes'], safeMeet: ['pumon'],
     news: ['branches'], coupons: ['pay'], family: ['alimtalk'], metrics: ['branches', 'pumon'], givingReport: ['giving'], givingNominate: ['giving'],
-    timePum: ['pumon'], memberMeet: ['events'], regular: ['staff'] };
+    timePum: ['pumon'], memberMeet: ['events'], regular: ['staff'], gps: ['places'], campaign: ['giving'], neighborCare: ['pumon', 'safety', 'localBadge'] };
   G.STAGES = STAGES;
   G.FEAT_DEPS = DEPS;
   G.featName = function (k) { var n = ''; STAGES.forEach(function (s) { s.items.forEach(function (i) { if (i[0] === k) n = i[1]; }); }); return n; };
@@ -173,7 +176,15 @@
       ],
       safeCalls: [],
       bigText: false,
-      proxyLog: []
+      proxyLog: [],
+      geo: { H1: [37.5563, 126.9236], H2: [37.5612, 126.9310], H3: [37.5650, 126.9440], H4: [37.5110, 127.0980] },
+      campaigns: [
+        { id: 'CA1', title: '겨울 이불 300채 함께 덮어요 (예시)', org: 'O2', proj: 'PJ1', until: '2026-12-20', goal: 300, unit: '채', ways: ['후원 1만 원 = 이불 반 채', '새 이불을 거점에 맡기기', '배달·정리 손길(서로품)'], joined: { u2: '물건', u4: '손길' }, base: 112, garnet: '더가넷이 이불 50채와 정리수납 손길 5가구를 더해요' }
+      ],
+      neighbors: [
+        { id: 'NB1', helper: 'u4', senior: 'u6', branch: 'B1', cycle: '주 1회 전화', since: '2026-10-15', last: '2026-10-26', st: '연결됨' }
+      ],
+      neighborApply: []
     };
   }
   function ensure() {
@@ -212,21 +223,33 @@
   G.addPoint = function (uid, why, amt) { if (!uid || !amt) return; (S.st.points[uid] = S.st.points[uid] || []).push([G.now().slice(0, 10), why, amt]); };
   G.notify = function (to, text) {
     if (!S.st) return;
-    S.st.notify.unshift({ at: G.now(), to: to, text: text }); S.st.notify = S.st.notify.slice(0, 120);
+    /* 안심 수신자가 없거나 공유 동의가 없으면 동네 가맹점 매니저(안심 매니저)가 함께 받아요 */
+    var fam0 = S.st.family[to], hasRecv = fam0 && fam0.consent && (fam0.receivers || []).length, mgr = G.feat('safety') && to && !hasRecv;
+    S.st.notify.unshift({ at: G.now(), to: to, text: text, urgent: mgr || undefined, mgr: mgr ? ((G.branch(G.memInfo(to).branch) || {}).manager || '본사 운영자') : undefined }); S.st.notify = S.st.notify.slice(0, 160);
     if (G.feat('alimtalk')) G.toast('알림톡(시연) · ' + text.replace(/^\[더가넷\]\s*/, ''));
     var fam = S.st.family[to];
     if (G.feat('family') && fam && fam.receivers && fam.receivers.length && fam.consent) fam.receivers.forEach(function (r) { S.st.notify.unshift({ at: G.now(), to: to, via: r.name, text: '(' + r.name + '님께 함께 발송) ' + text }); });
   };
+  G.addHours = function (str, h) { var d = new Date(String(str).replace(' ', 'T')); if (isNaN(d)) return ''; d.setHours(d.getHours() + h); var p = function (x) { return String(x).padStart(2, '0'); }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); };
   G.dayDiff = function (a, b) { return Math.round((Date.parse(String(b).slice(0, 10)) - Date.parse(String(a).slice(0, 10))) / 864e5); };
   G.badgesOf = function (uid) {
     var b = (S.st.badges[uid] || []).slice();
     var done = S.club ? S.club.deals.filter(function (d) { return d.status === 'DONE' && (d.req === uid || d.prov === uid); }).length : 0;
-    var good = S.st.ratings.filter(function (r) { return r.to === uid && r.level >= 2; }).length + done;
+    var rs = G.pubRatings(uid), good = rs.filter(function (r) { return r.level >= 2; }).length + done, low = rs.filter(function (r) { return r.level === 1; }).length;
     if (done && b.indexOf('새싹 품') < 0) b.unshift('새싹 품');
     if (good >= 10 && b.indexOf('따뜻한 품') < 0) b.push('따뜻한 품');
-    if (good >= 30 && b.indexOf('가넷 품') < 0) b.push('가넷 품');
+    if (good >= 30 && (!rs.length || low / rs.length < 0.1) && b.indexOf('가넷 품') < 0) b.push('가넷 품');
     if (G.feat('localBadge') && S.st.localOk[uid]) b.push('동네 확인');
     return b;
+  };
+  /* 평판 규칙: 양쪽이 모두 평가했거나 7일이 지난 평가만 반영, 3년 지난 평가는 빼요 */
+  G.pubRatings = function (uid) {
+    return S.st.ratings.filter(function (r) {
+      if (r.to !== uid) return false;
+      var age = G.dayDiff(r.at, SITE.today); if (age > 365 * 3) return false;
+      if (!r.deal) return true;
+      return age >= 7 || S.st.ratings.some(function (x) { return x.deal === r.deal && x.by === r.to; });
+    });
   };
   G.badgeHtml = function (uid) { return G.badgesOf(uid).map(function (x) { return '<span class="bd bd-' + (x === '동네 확인' ? 'ok' : 'info') + '">' + esc(x) + '</span>'; }).join(' '); };
 
@@ -241,7 +264,7 @@
     var admin = document.body.getAttribute('data-area') === 'admin';
     document.body.classList.toggle('big-text', !!(G.feat('bigText') && S.st.bigText && !admin));
     var rep = [];
-    if (G.feat('pumon')) rep.push([/이웃 나눔/g, '품온']);
+    if (G.feat('pumon')) rep.push([/이웃 나눔/g, '품온'], [/유료 재능/g, '유료']);
     if (G.feat('easyWords') && !admin) { rep.push([/견적 안내/g, '예상 비용 안내'], [/견적/g, '예상 비용'], [/청약철회/g, '취소하기']); }
     if (!rep.length) return;
     var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), n, list = [];
@@ -256,7 +279,7 @@
     var f = G.feat, isAdmin = !G.adminMe || G.adminMe().role === 'ADMIN';
     var m = [['admin', '대시보드', 'home'], ['#h', '운영'], ['admin-apps', '서비스 신청 관리', 'list'], ['admin-members', '회원 관리', 'users'], ['admin-inq', '상담·문의 관리', 'message'], ['admin-partners', '협력업체 관리', 'handshake']];
     if (f('staff')) m.push(['admin-staff', '방문 인력 관리', 'shield']);
-    if (f('phoneApply')) m.push(['admin-proxy', '전화 대리 접수', 'phone']);
+    if (f('phoneApply') || f('branchManager')) m.push(['admin-proxy', f('phoneApply') && f('branchManager') ? '대리 가입·전화 접수' : f('phoneApply') ? '전화 대리 접수' : '대리 가입', 'phone']);
     if (f('dispute')) m.push(['admin-disputes', '분쟁 처리', 'info']);
     if (f('safety')) m.push(['admin-safety', '안심 관리', 'bell']);
     var comm = [['admin-club', '이웃 나눔 검증', 'swap']];

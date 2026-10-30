@@ -36,24 +36,31 @@
   function points() {
     var u = uid(), bal = G.pointBal(u), cr = G.couponRate(u), ym = SITE.today.slice(0, 7), cps = T().coupons.filter(function (c) { return c.owner === u; });
     var got = cps.some(function (c) { return c.src === ym + ' 등급 이용권'; });
-    var body = (f('points') ? '<div class="kpis k3"><div class="kpi"><span>가넷 포인트</span><b>' + bal.toLocaleString('ko-KR') + 'P</b></div><div class="kpi"><span>적립률 (' + esc(PLANS[G.planOf(u)][0]) + ')</span><b>' + G.pointRate(u) + '%</b></div><div class="kpi"><span>사용 기준</span><b>1P = 1원</b></div></div>' +
+    var ti = G.trialInfo ? G.trialInfo(u) : null, bdg = G.badgesOf(u), gbs = f('groupbuy') ? T().groupbuys.filter(function (g) { return g.orders.some(function (o) { return o[0] === u; }); }) : [];
+    var sum = '<div class="card my-sum"><h3>' + ico('gem', 18) + ' 내 혜택 한눈에</h3><dl class="sum"><div class="kv"><dt>멤버십</dt><dd>' + esc(PLANS[G.planOf(u)][0]) + (f('memberLink') ? (G.isRegular(u) ? ' · 품온 정회원' : ' · 품온 체험 회원') : '') + '</dd></div>' +
+      (f('trial3') && ti && !ti.regular ? '<div class="kv"><dt>품온 체험</dt><dd>' + ti.left + '회 남음 (60일 ' + ti.total + '회)</dd></div>' : '') +
+      '<div class="kv"><dt>배지</dt><dd>' + (bdg.length ? G.badgeHtml(u) : '아직 없어요') + '</dd></div>' +
+      (gbs.length ? '<div class="kv"><dt>공동구매</dt><dd>' + gbs.map(function (g) { var o = g.orders.filter(function (x) { return x[0] === u; })[0]; return esc(g.title) + ' ' + o[1] + '개 · ' + esc(g.status) + (o[2] ? ' · ' + esc((G.hub(o[2]) || {}).name || '') + ' 수령' : ''); }).join('<br>') + '</dd></div>' : '') + '</dl>' +
+      (f('events') ? '<div class="inv"><p class="small"><b>친구 초대</b> · 초대한 분과 가입한 분 모두 품온 체험 1회가 늘어요. 초대 코드 <code>' + esc('GN' + u.toUpperCase()) + '</code></p><button class="btn btn-ghost btn-sm" data-act="invCopy" data-v="' + esc('GN' + u.toUpperCase()) + '">초대 코드 복사</button></div>' : '') + '</div>';
+    var body = sum + (f('points') ? '<div class="kpis k3"><div class="kpi"><span>가넷 포인트</span><b>' + bal.toLocaleString('ko-KR') + 'P</b></div><div class="kpi"><span>적립률 (' + esc(PLANS[G.planOf(u)][0]) + ')</span><b>' + G.pointRate(u) + '%</b></div><div class="kpi"><span>사용 기준</span><b>1P = 1원</b></div></div>' +
       tbl(['날짜', '내용', '>포인트'], (T().points[u] || []).slice().reverse().map(function (p) { return '<tr><td>' + p[0] + '</td><td>' + esc(p[1]) + '</td><td class="r">' + (p[2] > 0 ? '+' : '') + p[2].toLocaleString('ko-KR') + 'P</td></tr>'; }), '아직 쌓인 포인트가 없어요.') + '<p class="small">서비스 이용을 마치면 결제 금액의 적립률만큼, 품온 약속을 마치면 100P를 드려요. 포인트는 결제할 때 쓸 수 있고 현금으로 바꿀 수 없어요. 유효기간은 적립 후 2년이에요.</p>' : '') +
-      (f('coupons') ? '<h3 class="h3 mt">이용권</h3>' + (cr[0] ? (got ? '' : '<div class="callout">' + ico('gift', 20) + '<div><strong>이달 등급 이용권 ' + cr[0] + '%를 받을 수 있어요</strong><p>최대 ' + G.fmt(cr[1]) + ' 할인 · 협력업체 서비스는 10%까지 적용돼요.</p><p class="fa"><button class="btn btn-fill btn-sm" data-act="cpGet">이용권 받기</button></p></div></div>') : '<p class="small">LIFE START 이상이면 매달 5~20% 이용권을 드려요. <a class="lnk-i" href="#plans">멤버십 보기</a></p>') +
-        tbl(['이용권', '할인', '최대', '기한', '상태'], cps.map(function (c) { return '<tr><td>' + esc(c.src) + '</td><td>' + c.rate + '%</td><td>' + G.fmt(c.cap) + '</td><td>' + c.exp + '</td><td>' + (c.used ? '<span class="bd bd-mute">사용함</span>' : '<span class="bd bd-ok">사용 가능</span>') + '</td></tr>'; }), '받은 이용권이 없어요.') : '');
-    return shell('points', '포인트·이용권', body, '등급별 혜택은 멤버십 화면에서 비교할 수 있어요.');
+      (f('coupons') ? '<h3 class="h3 mt">이용권</h3>' + (cr[0] ? (got ? '' : '<div class="callout">' + ico('gift', 20) + '<div><strong>이달 등급 이용권 ' + cr[0] + '%를 받을 수 있어요</strong><p>최대 ' + G.fmt(cr[1]) + ' 할인 · 협력업체 서비스는 10%까지 적용돼요.</p><p class="fa"><button class="btn btn-fill btn-sm" data-act="cpGet">이용권 받기</button></p></div></div>') : '<p class="small">LIFE FREE는 이벤트로만 5% 이용권을 받아요. LIFE START 이상이면 매달 5~20% 이용권을 드려요. <a class="lnk-i" href="#plans">멤버십 보기</a></p>') + '<p class="small">이용권은 쓸 때 서비스를 골라요. 한 번 결제에 1장만 쓰고 포인트와 함께 쓸 수 있어요. 유효기간은 90일이고 만료 7일 전에 알려 드려요. 기부·후원에는 쓸 수 없어요.</p>' +
+        tbl(['이용권', '할인', '최대', '기한', '상태'], cps.map(function (c) { return '<tr><td>' + esc(c.src) + '</td><td>' + c.rate + '%</td><td>' + G.fmt(c.cap) + '</td><td>' + c.exp + '</td><td>' + (c.used ? '<span class="bd bd-mute">사용함</span>' : c.exp < SITE.today ? '<span class="bd bd-mute">기한 지남</span>' : G.dayDiff(SITE.today, c.exp) <= 7 ? '<span class="bd bd-warn">' + G.dayDiff(SITE.today, c.exp) + '일 뒤 만료</span>' : '<span class="bd bd-ok">사용 가능</span>') + '</td></tr>'; }), '받은 이용권이 없어요.') : '');
+    return shell('points', '포인트·이용권·배지', body, '등급별 혜택은 멤버십 화면에서 비교할 수 있어요.');
   }
-  G.ACT.cpGet = function () { var u = uid(), cr = G.couponRate(u); T().coupons.push({ id: 'CP' + (T().coupons.length + 1), owner: u, rate: cr[0], cap: cr[1], exp: G.addDays(SITE.today, 30), used: false, src: SITE.today.slice(0, 7) + ' 등급 이용권' }); G.save(); G.toast('이용권을 받았어요.'); G.rerender(); };
+  G.ACT.cpGet = function () { var u = uid(), cr = G.couponRate(u); T().coupons.push({ id: 'CP' + (T().coupons.length + 1), owner: u, rate: cr[0], cap: cr[1], exp: G.addDays(SITE.today, 90), used: false, src: SITE.today.slice(0, 7) + ' 등급 이용권' }); G.save(); G.toast('이용권을 받았어요. 90일 동안 쓸 수 있어요.'); G.rerender(); };
+  G.ACT.invCopy = function (el) { var v = el.dataset.v; try { navigator.clipboard.writeText(v).then(function () { G.toast('초대 코드를 복사했어요.'); }, function () { G.toast('초대 코드: ' + v); }); } catch (e) { G.toast('초대 코드: ' + v); } };
 
   /* ---------- 결제 (시연) ---------- */
   G.payOptions = function () { return f('pay') ? ['네이버페이', '토스페이', '카카오페이', '신용·체크카드', '계좌이체'].map(function (x) { return '<option>' + x + '</option>'; }).join('') : '<option>카드</option><option>계좌이체</option><option>간편결제</option>'; };
   function pay(no) {
     var a = G.app(no); if (!a || a.user !== uid() || a.status !== 'WAITING_APPROVAL' || !a.quote) return shell('apps', '결제', G.empty('결제할 수 있는 신청이 아니에요.', '<a class="btn btn-line btn-sm" href="#my-apps">신청 내역</a>'));
-    var s = G.sv(a.svc), q = a.quote.total, cps = f('coupons') ? T().coupons.filter(function (c) { return c.owner === uid() && !c.used; }) : [], bal = f('points') ? G.pointBal(uid()) : 0;
+    var s = G.sv(a.svc), q = a.quote.total, cps = f('coupons') ? T().coupons.filter(function (c) { return c.owner === uid() && !c.used && c.exp >= SITE.today; }) : [], bal = f('points') ? G.pointBal(uid()) : 0;
     var methods = [['네이버페이', 'N'], ['토스페이', 'T'], ['카카오페이', 'K'], ['신용·체크카드', ''], ['계좌이체', '']];
     var body = '<div class="pay"><div class="card"><h3>' + esc(s.name) + '</h3><table class="tbl"><tbody>' + a.quote.items.map(function (i) { return '<tr><td>' + esc(i[0]) + '</td><td class="r">' + G.fmt(i[1]) + '</td></tr>'; }).join('') + '<tr class="tot"><td>승인할 금액</td><td class="r">' + G.fmt(q) + '</td></tr></tbody></table>' +
       '<h4>결제 수단</h4><div class="pay-m">' + methods.map(function (m, i) { return '<label class="pay-o"><input type="radio" name="pm" value="' + m[0] + '"' + (i === 0 ? ' checked' : '') + '><span>' + (m[1] ? '<i class="pm-' + m[1] + '">' + m[1] + '</i>' : ico('receipt', 18)) + m[0] + '</span></label>'; }).join('') + '</div>' +
       (f('regular') ? fg('pm-inst', '할부 (카드 5만 원 이상)', sel('pm-inst', [['', '일시불'], ['2개월', '2개월'], ['3개월', '3개월'], ['6개월', '6개월']], '')) : '') +
-      (cps.length ? fg('pm-cp', '이용권', sel('pm-cp', [['', '쓰지 않음']].concat(cps.map(function (c) { return [c.id, c.src + ' ' + c.rate + '% (최대 ' + G.fmt(c.cap) + ')']; })), cps[0].id)) : '') +
+      fg('pm-rc', '영수증', sel('pm-rc', [['카드 전표', '카드 전표 (기본)'], ['현금영수증', '현금영수증 (소득공제)'], ['세금계산서', '세금계산서 (사업자)']], '')) + (cps.length ? fg('pm-cp', '이용권', sel('pm-cp', [['', '쓰지 않음']].concat(cps.map(function (c) { return [c.id, c.src + ' ' + c.rate + '% (최대 ' + G.fmt(c.cap) + ')']; })), cps[0].id)) : '') +
       (bal ? fg('pm-pt', '포인트 사용 (보유 ' + bal.toLocaleString('ko-KR') + 'P)', '<input id="pm-pt" type="number" min="0" max="' + bal + '" step="100" value="0" data-on="input:payCalc">') : '') +
       '</div><aside class="card pay-s"><h3>최종 결제</h3><dl class="sum"><div class="kv"><dt>금액</dt><dd>' + G.fmt(q) + '</dd></div><div class="kv"><dt>이용권 할인</dt><dd id="ps-c">-</dd></div><div class="kv"><dt>포인트</dt><dd id="ps-p">-</dd></div><div class="kv"><dt><b>결제할 금액</b></dt><dd><b id="ps-t">' + G.fmt(q) + '</b></dd></div></dl>' +
       '<label class="chk"><input type="checkbox" id="pm-a"><span><b>[필수]</b> 견적 내용과 취소·환불 기준을 확인했어요.</span></label><p class="err" id="pm-e" hidden>확인에 체크해 주세요.</p><button class="btn btn-fill btn-block" data-act="payDo" data-no="' + no + '">승인하고 결제하기</button><p class="small">시연 화면이라 실제로 결제되지 않아요. 결제는 승인과 함께 이루어지고, 승인 전에는 아무것도 청구되지 않아요.' + (f('family') ? ' 가족이 대신 결제하도록 링크를 보낼 수도 있어요.' : '') + '</p>' + (f('family') ? '<button class="btn btn-line btn-block" data-act="payFamily" data-no="' + no + '">가족에게 결제 요청 보내기</button>' : '') + '</aside></div>';
@@ -72,7 +79,7 @@
     if (!$('pm-a').checked) { $('pm-e').hidden = false; return; }
     var no = el.dataset.no, a = G.app(no), c = calc(no), m = (document.querySelector('[name=pm]:checked') || {}).value;
     if (c.cp) c.cp.used = true; if (c.pt) G.addPoint(uid(), a.no + ' 결제에 사용', -c.pt);
-    T().payments.unshift({ app: no, user: uid(), at: G.now(), method: m, inst: val('pm-inst'), gross: c.q, coupon: c.disc, point: c.pt, paid: c.total });
+    T().payments.unshift({ app: no, user: uid(), at: G.now(), method: m, inst: val('pm-inst'), receipt: val('pm-rc'), gross: c.q, coupon: c.disc, point: c.pt, paid: c.total });
     G.addHist(a, 'APPROVED', '고객', '견적을 승인하고 ' + m + '로 ' + G.fmt(c.total) + ' 결제했어요. (시연)'); G.log(no + ' 고객 승인·결제 (시연)');
     G.save(); G.toast('승인하고 결제했어요. 일정은 운영자가 조율해 안내드려요.'); G.go('my-app-' + no);
   };
@@ -91,8 +98,16 @@
     var rec = '<ul class="mng">' + fam.receivers.map(function (r, i) { return '<li><div><b>' + esc(r.name) + '</b> <span class="tag">' + esc(r.rel) + '</span><small>' + esc(r.phone) + ' · ' + r.roles.join(', ') + '</small></div><button class="btn btn-ghost btn-sm" data-act="famDel" data-i="' + i + '">빼기</button></li>'; }).join('') + '</ul>';
     var body = '<div class="two fam"><div class="card form"><h3>' + ico('users', 18) + ' 함께 알림 받을 가족·지인</h3>' + (fam.receivers.length ? rec : '<p class="small">아직 없어요. 최대 3명까지 등록할 수 있어요.</p>') +
       '<form data-sub="famAdd" novalidate><div class="fgrid">' + fg('fm-n', '이름', '<input id="fm-n">') + fg('fm-r', '관계', sel('fm-r', ['자녀', '배우자', '형제·자매', '친구·지인', '기타'], '자녀')) + fg('fm-p', '휴대폰', '<input id="fm-p" type="tel" placeholder="010-0000-0000">') + '</div><div class="cks">' + ['진행 알림', '결제 대신', '일정 보기'].map(function (r, i) { return '<label class="chk"><input type="checkbox" name="fm-role" value="' + r + '"' + (i === 0 ? ' checked' : '') + '> ' + r + '</label>'; }).join('') + '</div><p class="err" id="fm-e" hidden></p><button class="btn btn-line btn-sm" type="submit">추가</button></form>' +
-      '<label class="chk mt"><input type="checkbox" data-on="change:famConsent"' + (fam.consent ? ' checked' : '') + '><span><b>본인 동의</b> 위 분들에게 내 신청 진행과 일정을 함께 알리는 데 동의해요. 언제든 끌 수 있어요.</span></label></div>' +
-      '<div class="card"><h3>' + ico('phone', 18) + ' 알림 받을 사람이 없나요?</h3><p class="small">가족이나 지인이 없어도 괜찮아요. 가맹점 매니저가 한 달에 한 번 안부 전화를 드리고, 중요한 알림을 확인하지 않으면 직접 전화로 알려 드려요.</p><label class="chk"><input type="checkbox" data-on="change:famAlone"' + (fam.alone ? ' checked' : '') + '><span>가맹점 안심콜을 받을게요' + (fam.lastCall ? ' · 최근 안부 전화 ' + fam.lastCall : '') + '</span></label>' +
+      '<label class="chk mt"><input type="checkbox" data-on="change:famConsent"' + (fam.consent ? ' checked' : '') + '><span><b>본인 동의</b> 위 분들에게 내 신청 진행과 일정을 함께 알리는 데 동의해요. 자녀가 결제한다고 자동으로 볼 수 있는 게 아니고, 언제든 끄거나 받는 사람을 바꿀 수 있어요.</span></label>' +
+      '<div class="fgrid mt">' + fg('fm-sc', '공유 범위', sel('fm-sc', [['all', '완료 보고·사진·일정·품온 활동 모두'], ['nophoto', '사진은 빼고 공유'], ['min', '일정과 완료 여부만']], fam.scope || 'all').replace('<select ', '<select data-on="change:famSet" data-k="scope" ')) +
+      fg('fm-pay', '결제하는 사람', sel('fm-pay', [['self', '본인(부모님)이 직접'], ['family', '가족이 대신 (결제 대신 역할)']], fam.payer || 'self').replace('<select ', '<select data-on="change:famSet" data-k="payer" ')) +
+      fg('fm-how', '리포트 받는 방법', sel('fm-how', [['talk', '알림톡'], ['big', '큰 글씨 리포트'], ['call', '전화로 읽어 드리기']], fam.how || 'talk').replace('<select ', '<select data-on="change:famSet" data-k="how" ')) + '</div></div>' +
+      '<div class="card"><h3>' + ico('phone', 18) + ' 알림 받을 사람이 없나요?</h3><p class="small">괜찮아요. 받을 사람을 정하지 않으면 <b>동네 가맹점 매니저(안심 매니저)</b>가 대신 받아요. 만남 종료 확인이 없으면 먼저 전화드리고, 2주 넘게 활동·연락이 없으면 안부 전화를 드려요.</p><label class="chk"><input type="checkbox" data-on="change:famAlone"' + (fam.alone ? ' checked' : '') + '><span>가넷 안심콜을 정기적으로 받을게요' + (fam.lastCall ? ' · 최근 안부 전화 ' + fam.lastCall : '') + '</span></label>' +
+      (fam.alone ? fg('fm-cyc', '안심콜 주기', sel('fm-cyc', ['주 1회', '2주 1회', '월 1회'], fam.cycle || '주 1회').replace('<select ', '<select data-on="change:famSet" data-k="cycle" ')) : '') +
+      '<label class="chk"><input type="checkbox" data-on="change:famPub"' + (fam.pub ? ' checked' : '') + '><span>노인맞춤돌봄서비스 같은 공공 돌봄 신청 안내와 주민센터 연결에 동의해요</span></label>' +
+      '<label class="chk"><input type="checkbox" data-on="change:famProc"' + (fam.proc ? ' checked' : '') + '><span>연락이 안 될 때 절차(전화 2회 → 지정 연락처 → 필요하면 관할 기관에 안전 확인 요청)에 동의해요</span></label>' +
+      (f('neighborCare') ? '<div class="nbc"><h4>' + ico('heart', 16) + ' 안부 이웃</h4>' + nbcBox(u) + '</div>' : '') +
+      '<p class="small warn-t">' + ico('info', 14) + ' 안심 기능은 확인과 연락을 돕는 서비스이고 응급 서비스가 아니에요. 응급 상황에서는 <a class="lnk-i" href="tel:119">119</a>에 먼저 연락하세요.</p>' +
       '<h3 class="mt">' + ico('file', 18) + ' 가넷 안심 리포트 · ' + month.replace('-', '년 ') + '월</h3><dl class="sum"><div class="kv"><dt>이용한 서비스</dt><dd>' + (mApps.length ? mApps.map(function (a) { return esc(G.sv(a.svc).name) + ' (' + G.stName(a.status) + ')'; }).join(', ') : '없음') + '</dd></div><div class="kv"><dt>방문한 사람</dt><dd>' + (mApps.map(function (a) { var w = byId(T().staff, T().appStaff[a.no]); return w ? w.name + ' ' + w.role : ''; }).filter(Boolean).join(', ') || '-') + '</dd></div><div class="kv"><dt>다가오는 일정</dt><dd>' + cal.length + '건</dd></div><div class="kv"><dt>안심 만남</dt><dd>' + Object.keys(T().checkins).filter(function (k) { var d = G.nbDeal(k); return d && (d.req === u || d.prov === u); }).length + '회 확인</dd></div></dl><p class="small">리포트는 매달 1일 본인' + (fam.consent && fam.receivers.length ? '과 등록한 가족' : '') + '에게 알림톡으로 보내요. 부모님이 직접 결제하셔도, 가족이 대신 결제해도 리포트는 같이 받아요.</p></div></div>' +
       '<h3 class="h3 mt">가족 일정</h3>' + (cal.length ? '<ul class="mng">' + cal.map(function (c) { return '<li><div><b>' + esc(c[1]) + '</b><small>' + esc(c[0]) + '</small></div><a class="btn btn-line btn-sm" href="' + c[2] + '">보기</a></li>'; }).join('') + '</ul>' : G.empty('다가오는 일정이 없어요.'));
     return shell('family', '가족·안심', body, '가족 역할은 진행 알림 받기 · 결제 대신 하기 · 일정 보기 중에서 골라요.');
@@ -105,6 +120,17 @@
   };
   G.ACT.famDel = function (el) { famOf(uid()).receivers.splice(+el.dataset.i, 1); G.save(); G.rerender(); };
   G.INP.famConsent = function (el) { famOf(uid()).consent = el.checked; G.save(); G.toast(el.checked ? '가족과 함께 알림을 받아요.' : '가족 알림을 껐어요.'); };
+  G.INP.famSet = function (el) { famOf(uid())[el.dataset.k] = el.value; G.save(); G.toast('저장했어요.'); };
+  G.INP.famPub = function (el) { famOf(uid()).pub = el.checked; G.save(); G.toast(el.checked ? '공공 돌봄 연결에 동의했어요. 가맹점이 안내해 드려요.' : '동의를 껐어요.'); };
+  G.INP.famProc = function (el) { famOf(uid()).proc = el.checked; G.save(); G.toast(el.checked ? '연락 불가 절차에 동의했어요.' : '동의를 껐어요.'); };
+  function nbcBox(u) {
+    var t = T(), mine = (t.neighbors || []).filter(function (n) { return n.senior === u; })[0], ap = (t.neighborApply || []).filter(function (n) { return n.senior === u && n.st === '신청'; })[0];
+    if (mine) return '<p class="small">' + esc(G.nbMember(mine.helper).name) + '님이 ' + esc(mine.cycle) + ' 안부를 챙겨요 · 최근 ' + esc(mine.last) + '</p><button class="btn btn-ghost btn-sm" data-act="nbcEnd" data-id="' + mine.id + '">안부 이웃 그만두기</button>';
+    if (ap) return '<p class="small">신청했어요. 가맹점 매니저가 \'가넷 품\' 배지를 가진 이웃 중에서 연결해 드려요.</p>';
+    return '<p class="small">원하시면 \'가넷 품\' 배지를 가진 검증된 이웃이 정해진 주기로 안부 전화나 방문을 해요. 가맹점 매니저가 연결하고 첫 만남에 함께해요.</p><button class="btn btn-line btn-sm" data-act="nbcApply">안부 이웃 신청하기</button>';
+  }
+  G.ACT.nbcApply = function () { var t = T(); t.neighborApply = t.neighborApply || []; t.neighborApply.unshift({ id: 'NA' + (t.neighborApply.length + 1), senior: uid(), at: SITE.today, st: '신청', branch: G.memInfo(uid()).branch }); G.log('안부 이웃 신청'); G.save(); G.toast('신청했어요. 가맹점이 연결해 드릴게요.'); G.rerender(); };
+  G.ACT.nbcEnd = function (el) { var n = (T().neighbors || []).filter(function (x) { return x.id === el.dataset.id; })[0]; if (n) n.st = '종료'; T().neighbors = T().neighbors.filter(function (x) { return x.id !== el.dataset.id; }); G.save(); G.toast('안부 이웃을 그만두었어요.'); G.rerender(); };
   G.INP.famAlone = function (el) { famOf(uid()).alone = el.checked; G.save(); G.toast(el.checked ? '가맹점 안심콜을 신청했어요.' : '안심콜을 껐어요.'); };
 
   /* ---------- 받은 알림 ---------- */
@@ -129,13 +155,13 @@
 
   /* ---------- 나의 나눔 ---------- */
   function giving() {
-    var l = T().gifts.filter(function (g) { return g.user === uid(); }), tot = l.reduce(function (s, g) { return s + g.amt; }, 0), mt = l.reduce(function (s, g) { return s + (g.match || 0); }, 0);
-    var body = '<div class="kpis k3"><div class="kpi"><span>내가 함께한 금액</span><b>' + G.fmt(tot) + '</b></div><div class="kpi"><span>더가넷이 더한 매칭</span><b>' + G.fmt(mt) + '</b></div><div class="kpi"><span>함께한 사업</span><b>' + l.length + '</b></div></div>' +
+    var l = T().gifts.filter(function (g) { return g.user === uid(); }), tot = l.reduce(function (s, g) { return s + g.amt; }, 0), mt = l.reduce(function (s, g) { return s + (g.match || 0); }, 0), pt = l.reduce(function (s, g) { return s + (g.point || 0); }, 0);
+    var body = '<div class="kpis k4"><div class="kpi"><span>내가 함께한 금액</span><b>' + G.fmt(tot) + '</b></div><div class="kpi"><span>더가넷이 더한 매칭</span><b>' + G.fmt(mt) + '</b></div><div class="kpi"><span>포인트 기부</span><b>' + pt.toLocaleString('ko-KR') + 'P</b></div><div class="kpi"><span>함께한 사업</span><b>' + l.length + '</b></div></div>' +
       (l.length ? l.map(function (g) {
         var p = byId(T().projects, g.proj) || {}, o = byId(T().orgs, p.org) || {}, sent = G.projSpent(g.proj, '전달'), used = G.projSpent(g.proj), rp = T().reports[g.proj];
-        var st = used ? 3 : sent ? 2 : 1;
-        return '<article class="card gv-my"><p class="meta"><span class="tag">' + esc(p.target) + '</span><span class="small">' + esc(g.at) + ' · ' + esc(g.kind) + '</span></p><h3><a href="#give-' + p.id + '">' + esc(p.title) + '</a></h3><p>' + G.fmt(g.amt) + (g.match ? ' + 더가넷 매칭 ' + G.fmt(g.match) : '') + '</p>' +
-          '<ol class="stp">' + ['후원', '모금', '기관 전달', '집행·보고'].map(function (s, i) { return '<li class="' + (i < st ? 'done' : i === st ? 'cur' : '') + '"><span class="stp-n">' + (i < st ? ico('check', 14) : i + 1) + '</span><span class="stp-t">' + s + '</span></li>'; }).join('') + '</ol>' +
+        var st = rp && rp.approved ? 5 : used >= G.projRaised(g.proj) && used ? 4 : used ? 3 : sent ? 2 : 1;
+        return '<article class="card gv-my"><p class="meta"><span class="tag">' + esc(p.target) + '</span><span class="small">' + esc(g.at) + ' · ' + esc(g.kind) + '</span></p><h3><a href="#give-' + p.id + '">' + esc(p.title) + '</a></h3><p>' + (g.point ? '포인트 ' + g.point.toLocaleString('ko-KR') + 'P 기부 (더가넷 이름)' : G.fmt(g.amt)) + (g.match ? ' + 더가넷 매칭 ' + G.fmt(g.match) : '') + ' · ' + (g.open ? '이름 공개' : '익명') + '</p>' +
+          '<ol class="stp stp5">' + ['후원', '기관 접수 확인', '집행 중', '집행 완료', '결과 보고'].map(function (s, i) { return '<li class="' + (i < st ? 'done' : i === st ? 'cur' : '') + '"><span class="stp-n">' + (i < st ? ico('check', 14) : i + 1) + '</span><span class="stp-t">' + s + '</span></li>'; }).join('') + '</ol>' +
           (rp && rp.approved ? '<p class="small">' + ico('file', 14) + ' 결과 보고: ' + esc(rp.text) + '</p>' : '') + '<p class="small">기부금 영수증: ' + esc(o.name || '') + '에서 발급 (연말정산 간소화 자료로 등록돼요)</p></article>';
       }).join('') : G.empty('아직 함께한 나눔이 없어요.', '<a class="btn btn-fill btn-sm" href="#giving">나눔 사업 보기</a>'));
     return shell('giving', '나의 나눔', body, '내 후원이 기관에 전달되고 쓰이는 과정을 단계별로 보여 드려요.');
@@ -144,16 +170,17 @@
   /* ---------- 문제 접수 ---------- */
   function dispute(ref) {
     var u = uid(), mine = T().disputes.filter(function (d) { return d.user === u; });
-    var refs = S.apps.filter(function (a) { return a.user === u && ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'APPROVED'].indexOf(a.status) >= 0; }).map(function (a) { return [a.no, a.no + ' · ' + G.sv(a.svc).name]; })
+    var doneAt = function (a) { var h = a.hist.filter(function (x) { return x[0] === 'COMPLETED'; })[0]; return h ? h[1] : ''; };
+    var refs = S.apps.filter(function (a) { return a.user === u && (['SCHEDULED', 'IN_PROGRESS', 'APPROVED'].indexOf(a.status) >= 0 || (a.status === 'COMPLETED' && G.dayDiff(doneAt(a), SITE.today) <= 7)); }).map(function (a) { return [a.no, a.no + ' · ' + G.sv(a.svc).name]; })
       .concat(S.club.deals.filter(function (d) { return (d.req === u || d.prov === u) && ['VERIFIED', 'DONE'].indexOf(d.status) >= 0; }).map(function (d) { return [d.id, '품온 ' + d.id + ' · ' + G.nbPost(d.post).title]; }));
-    var form = '<form class="card form" data-sub="dspAdd" novalidate><div class="fgrid">' + fg('dp-r', '어떤 이용인가요', sel('dp-r', refs, ref)) + fg('dp-t', '어떤 문제인가요', sel('dp-t', G.COMP.map(function (c) { return [c[0], c[0]]; }).concat([['기타', '기타']]), '')) + fg('dp-x', '자세한 내용', '<textarea id="dp-x" rows="4" placeholder="언제, 무엇이, 어떻게 달랐는지 적어 주세요. (10자 이상)"></textarea>', 'full') + fg('dp-f', '사진·자료 (시연: 파일 이름)', '<input id="dp-f" placeholder="예: 파손부위.jpg">') + '</div><p class="err" id="dp-e" hidden></p><button class="btn btn-fill" type="submit">접수하기</button><p class="small">24시간 안에 담당자가 먼저 연락드리고, 상대방 이야기까지 들은 뒤 7일 안에 결과를 알려 드려요. <a class="lnk-i" href="#promise">보상 기준표</a></p></form>';
+    var form = '<form class="card form" data-sub="dspAdd" novalidate><div class="fgrid">' + fg('dp-r', '어떤 이용인가요', sel('dp-r', refs, ref)) + fg('dp-t', '어떤 문제인가요', sel('dp-t', G.COMP.map(function (c) { return [c[0], c[0]]; }).concat([['기타', '기타']]), '')) + fg('dp-x', '자세한 내용', '<textarea id="dp-x" rows="4" placeholder="언제, 무엇이, 어떻게 달랐는지 적어 주세요. (10자 이상)"></textarea>', 'full') + fg('dp-f', '사진·자료', '<input id="dp-f" type="file" accept="image/*,application/pdf" multiple>') + '</div><p class="err" id="dp-e" hidden></p><button class="btn btn-fill" type="submit">접수하기</button><p class="small">24시간 안에 담당자가 먼저 연락드리고, 상대방 이야기까지 들은 뒤 7일 안에 결과를 알려 드려요. <a class="lnk-i" href="#promise">보상 기준표</a> · 완료된 서비스는 완료 후 7일 안에 접수할 수 있어요.</p></form>';
     var list = mine.length ? '<h3 class="h3 mt">접수한 문제</h3><ul class="nl">' + mine.map(function (d) { return '<li class="q"><div><span class="bd bd-' + (d.status === '종결' ? 'ok' : 'warn') + '">' + d.status + '</span><b>' + esc(d.type) + '</b><time>' + d.at + '</time></div><p>' + esc(d.text) + '</p>' + (d.decision ? '<p class="ans"><b>결과</b> ' + esc(d.decision) + (d.comp ? ' · ' + esc(d.comp) : '') + '</p>' : '<p class="small">결정 기한 ' + G.addDays(d.at, 7) + '</p>') + '</li>'; }).join('') + '</ul>' : '';
     return shell('dispute', '문제 접수', (refs.length ? form : G.empty('문제를 접수할 수 있는 이용이 없어요.')) + list, '이용 중 불편하거나 약속과 달랐던 일을 알려 주세요.');
   }
   G.SUB.dspAdd = function () {
     var x = val('dp-x'), e = $('dp-e'); if (x.length < 10) { e.textContent = '내용을 10자 이상 적어 주세요.'; e.hidden = false; return; }
     var r = val('dp-r'), isApp = !!G.app(r);
-    T().disputes.unshift({ id: 'DS' + (T().disputes.length + 1), app: isApp ? r : '', deal: isApp ? '' : r, user: uid(), type: val('dp-t'), text: x, file: val('dp-f'), at: G.now(), status: '접수', counter: '', decision: '', comp: '', contactAt: '' });
+    T().disputes.unshift({ id: 'DS' + (T().disputes.length + 1), app: isApp ? r : '', deal: isApp ? '' : r, user: uid(), type: val('dp-t'), text: x, file: (function () { var x = $('dp-f'); return x && x.files ? Array.prototype.map.call(x.files, function (y) { return y.name; }).join(', ') : ''; })(), at: G.now(), status: '접수', counter: '', decision: '', comp: '', contactAt: '' });
     if (!isApp) { var d = G.nbDeal(r); if (d && d.pay && d.pay.st === 'HELD') { d.pay.st = 'DISPUTED'; d.pay.disputeNote = x; } }
     G.notify(uid(), '[더가넷] 문제 접수를 받았어요. 24시간 안에 담당자가 연락드릴게요.'); G.log('분쟁 접수: ' + r); G.save(); G.toast('접수했어요.'); G.rerender();
   };

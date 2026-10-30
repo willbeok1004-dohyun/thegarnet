@@ -32,7 +32,7 @@
     if (acc && acc.role === 'BRANCH' && !f('branchManager')) { var e = $('a-e'); e.textContent = '가맹점 매니저 계정은 [단계별 기능 공개 → 2단계 · 가맹점 매니저]를 켜야 쓸 수 있어요.'; e.hidden = false; return; }
     oLogin(form);
   };
-  var BRANCH_OK = ['', 'apps', 'app-', 'members', 'member-', 'inq', 'preorders', 'branches', 'branch-', 'hub-', 'events', 'event-', 'news', 'proxy', 'safety', 'staff', 'search-'];
+  var BRANCH_OK = ['', 'apps', 'app-', 'members', 'member-', 'inq', 'preorders', 'branches', 'branch-', 'branchedit-', 'hub-', 'events', 'event-', 'news', 'proxy', 'safety', 'staff', 'search-'];
   var branchAllowed = function (arg) { return BRANCH_OK.some(function (g) { return arg === g || (g.slice(-1) === '-' && arg.indexOf(g) === 0); }); };
   var oMenu = G.admMenu;
   G.admMenu = function () {
@@ -45,14 +45,14 @@
     if (h === 'admin-disputes' && f('dispute')) return t.disputes.filter(function (d) { return d.status !== '종결'; }).length;
     if (h === 'admin-safety' && f('safety')) return safetyItems().length;
     if (h === 'admin-preorders' && f('preorder')) return t.preorders.filter(function (r) { return !r.called; }).length;
-    if (h === 'admin-branches' && f('hubOps')) return t.storage.filter(function (x) { return x.st === '보관 중' && x.due < SITE.today; }).length;
+    if (h === 'admin-branches' && f('hubOps')) return t.storage.filter(function (x) { return x.st === '전달 대기' && x.due < SITE.today; }).length;
     if (h === 'admin-nominate' && f('givingNominate')) return t.nominations.filter(function (x) { return x.st !== '선정' && x.st !== '보류'; }).length;
     return 0;
   };
   G.admTopExtra = function () {
     return f('adminSearch') ? '<form class="adm-srch" data-sub="admSearch" role="search"><label class="srch">' + ico('search', 16) + '<input id="adm-q" type="search" placeholder="회원·신청·업체·글·후원 통합 검색" aria-label="통합 검색"></label></form>' : '';
   };
-  G.SUB.admSearch = function () { var q = val('adm-q'); if (q) G.go('admin-search-' + encodeURIComponent(q)); };
+  G.SUB.admSearch = function () { var q = val('adm-q'); if (!q) return; var a = G.app(q.toUpperCase()); if (a && (!myBranch() || G.branchOfRegion(a.region) === myBranch())) { G.log('통합 검색: ' + q + ' → 신청 상세', 'VIEW'); return G.go('admin-app-' + a.no); } var m = MEMBERS.filter(function (x) { return x.id === q; })[0]; if (m) return G.go('admin-member-' + m.id); G.go('admin-search-' + encodeURIComponent(q)); };
 
   /* ---------- 라우팅 ---------- */
   var oAdmin = P.admin;
@@ -66,6 +66,7 @@
     if (isBranch() && !f('branchManager')) { S.adminAuthed = false; G.save(); return oAdmin('login', r); }
     if (isBranch() && !branchAllowed(arg)) return A({ title: '권한 없음', heading: '접근 권한이 없어요', sub: '역할: 가맹점 매니저', html: card('', '<p>가맹점 매니저는 담당 동네의 신청·회원·사전 신청·거점·이벤트·소식·대리 접수·안심 관리만 다뤄요.</p><p class="fa"><a class="btn btn-line btn-sm" href="#admin">대시보드로</a></p>') });
     var seg = function (p) { return arg.indexOf(p) === 0 ? arg.slice(p.length) : null; }, x;
+    if (myBranch() && ((x = seg('app-')) !== null && G.app(x) && G.branchOfRegion(G.app(x).region) !== myBranch() || (x = seg('member-')) !== null && G.memInfo(x).branch !== myBranch())) return A({ title: '권한 없음', heading: '담당 동네가 아니에요', sub: '역할: 가맹점 매니저', html: card('', '<p>가맹점 매니저는 담당 동네(' + esc((G.branch(myBranch()) || {}).name || '') + ')의 신청과 회원만 볼 수 있어요.</p><p class="fa"><a class="btn btn-line btn-sm" href="#admin">대시보드로</a></p>') });
     var gate = function (k, fn) { return f(k) ? fn() : off(k); };
     if (arg === 'features') return me().role === 'ADMIN' ? features() : A({ title: '권한 없음', heading: '접근 권한이 없어요', html: card('', '<p>단계별 기능 공개는 최고관리자만 바꿀 수 있어요.</p>') });
     if (arg === 'branches') return gate('branches', branches);
@@ -112,7 +113,7 @@
     partnerInfo: ['admin-partners', '관리자 · 협력업체'], safeNumber: ['my-app-G2610-0002', '마이 · 일정 확정 신청'], bridge: ['svc-S12', '고객 · 동행 상세'], giving: ['giving', '고객 · 나눔'],
     bigText: ['home', '고객 · 홈'], phoneApply: ['admin-proxy', '관리자 · 전화 접수'], family: ['my-family', '마이 · 가족·안심'], alimtalk: ['my-notify', '마이 · 받은 알림'], easyWords: ['my-apps', '마이 · 신청 내역'],
     homeLog: ['my-homelog', '마이 · 우리 집 기록'], metrics: ['admin-metrics', '관리자 · 품온 지표'], adminSearch: ['admin-search-김', '관리자 · 통합 검색'], safety: ['admin-safety', '관리자 · 안심 관리'], givingReport: ['giving-report', '고객 · 나눔 보고서'],
-    timePum: ['club', '고객 · 품온'], memberMeet: ['events', '고객 · 모임'], givingNominate: ['giving-nominate', '고객 · 나눔 추천'], regular: ['apply-S03', '고객 · 신청서'], pwa: ['home', '고객 · 홈']
+    timePum: ['club', '고객 · 품온'], memberMeet: ['events', '고객 · 모임'], givingNominate: ['giving-nominate', '고객 · 나눔 추천'], regular: ['apply-S03', '고객 · 신청서'], gps: ['places', '고객 · 거점 찾기'], campaign: ['giving-campaign', '고객 · 공동 캠페인'], neighborCare: ['admin-safety', '관리자 · 안심 관리'], pwa: ['home', '고객 · 홈']
   };
   function features() {
     var fl = T().flags, total = 0, on = 0, cur = '아직 없음';
@@ -124,7 +125,7 @@
         var k = i[0], deps = (G.FEAT_DEPS[k] || []).map(G.featName), w = WHERE[k];
         return '<li class="ft-row' + (fl[k] ? ' on' : '') + '"><label class="sw"><input type="checkbox" data-on="change:featSw" data-k="' + k + '"' + (fl[k] ? ' checked' : '') + ' aria-label="' + esc(i[1]) + '"><i></i></label><div><b>' + esc(i[1]) + '</b>' +
           (deps.length ? '<small>함께 켜지는 기능: ' + deps.map(esc).join(', ') + '</small>' : '') + (rev[k] ? '<small>끄면 함께 꺼짐: ' + rev[k].map(G.featName).map(esc).join(', ') + '</small>' : '') + '</div>' +
-          (w ? '<a class="lnk-i" href="#' + w[0] + '">' + esc(w[1]) + '</a>' : '') + '</li>';
+          (w ? (fl[k] ? '<a class="lnk-i" href="#' + w[0] + '">' + esc(w[1]) + '</a>' : '<span class="small">켜면 ' + esc(w[1]) + '에 열려요</span>') : '') + '</li>';
       }).join('');
       return '<section class="ac ft-st" id="st-' + s.id + '"><div class="ft-h"><div><p class="kick">STAGE ' + (si === 0 ? 'NOW' : si === 6 ? '2ND' : si) + '</p><h2>' + esc(s.name) + '</h2><p class="small">' + esc(s.why) + '</p></div><div class="ft-c"><span class="bd bd-' + (n === s.items.length ? 'ok' : n ? 'warn' : 'mute') + '">' + n + ' / ' + s.items.length + ' 켜짐</span>' +
         '<div class="inl"><button class="btn btn-fill btn-sm" data-act="featStage" data-i="' + si + '" data-v="1">이 단계 실행</button><button class="btn btn-ghost btn-sm" data-act="featStage" data-i="' + si + '" data-v="0">이 단계 끄기</button></div></div></div>' +
@@ -168,18 +169,19 @@
     });
     var st = T().storage.filter(function (x) { return !myBranch() || (G.hub(x.hub) || {}).branch === myBranch(); });
     var hubRows = T().hubs.filter(function (h) { return !myBranch() || h.branch === myBranch(); }).map(function (h) {
-      var used = st.filter(function (x) { return x.hub === h.id && x.st === '보관 중'; }).length;
+      var used = st.filter(function (x) { return x.hub === h.id && x.st === '전달 대기'; }).length;
       return '<tr class="lk" data-act="goto" data-to="admin-hub-' + h.id + '"><td><a href="#admin-hub-' + h.id + '"><b>' + esc(h.name) + '</b></a><small class="blk">' + esc(h.kind) + ' · ' + esc((G.branch(h.branch) || {}).name || '') + '</small></td><td>' + esc(h.addr) + '</td><td>' + esc(h.hours) + '</td><td class="r">' + used + ' / ' + h.lockers + '</td><td>' + (h.meet ? '모임 가능' : '-') + '</td></tr>';
     });
     var stRows = st.map(function (x) {
-      var late = x.st === '보관 중' && x.due < SITE.today;
-      return '<tr><td><b>' + esc(x.code) + '</b><small class="blk">' + esc(x.deal || '') + '</small></td><td>' + esc(x.item) + '</td><td>' + esc((G.hub(x.hub) || {}).name || '') + '</td><td>' + esc(nm(x.from)) + ' → ' + esc(nm(x.to)) + '</td><td>' + esc(x.at.slice(0, 10)) + '<small class="blk">기한 ' + x.due + '</small></td><td>' + (late ? '<span class="bd bd-bad">기한 지남</span>' : '<span class="bd bd-' + (x.st === '보관 중' ? 'info' : 'ok') + '">' + esc(x.st) + '</span>') + '</td><td>' + (x.st === '보관 중' ? '<div class="inl"><button class="btn btn-line btn-sm" data-act="stoSet" data-id="' + x.id + '" data-v="수령 완료">수령 확인</button><button class="btn btn-ghost btn-sm" data-act="stoSet" data-id="' + x.id + '" data-v="반환">반환</button></div>' : '') + '</td></tr>';
+      var late = x.st === '전달 대기' && x.due < SITE.today, late2 = x.st === '전달 대기' && G.addDays(x.due, 7) < SITE.today;
+      return '<tr><td><b>' + esc(x.code) + '</b><small class="blk">글 ' + esc(x.post || '') + ' · ' + esc(x.deal || '') + '</small></td><td>' + esc(x.item) + '</td><td>' + esc((G.hub(x.hub) || {}).name || '') + '</td><td>' + esc(nm(x.from)) + ' → ' + esc(nm(x.to)) + '</td><td>' + esc(x.at.slice(0, 10)) + '<small class="blk">기한 ' + x.due + '</small></td><td>' + (late2 ? '<span class="bd bd-bad">2차 기한 지남 · 기부·정리 대상</span>' : late ? '<span class="bd bd-warn">기한 지남 · 맡긴 분께 알림</span>' : '<span class="bd bd-' + (x.st === '전달 대기' ? 'info' : 'ok') + '">' + esc(x.st) + '</span>') + '</td><td>' + (x.st === '전달 대기' ? '<div class="inl"><button class="btn btn-line btn-sm" data-act="stoSet" data-id="' + x.id + '" data-v="전달 완료">인증 확인 · 전달 완료</button>' + (late ? '<button class="btn btn-ghost btn-sm" data-act="stoNotice" data-id="' + x.id + '">기한 알림</button>' : '') + '<button class="btn btn-ghost btn-sm" data-act="stoSet" data-id="' + x.id + '" data-v="' + (late2 ? '기부·정리' : '반환') + '">' + (late2 ? '기부·정리' : '반환') + '</button></div>' : '') + '</td></tr>';
     });
     return A({ title: '가맹점·거점', heading: '가맹점 · 거점', sub: '가맹점 하나가 하나의 동네예요. 필수 정보와 거점·보관함을 함께 관리해요.', html:
       card('가맹점 (동네)', (isBranch() ? '' : '<div class="fa top"><a class="btn btn-fill btn-sm" href="#admin-branchedit-new">' + ico('plus', 16) + ' 가맹점 등록</a></div>') + tbl(['가맹점', '사업자등록번호 · 업태/종목', '매니저 · 연락처', '담당 동네', '>회원', '>거점'], rows)) +
-      (f('places') ? card('거점 (전달·모임 장소)', (isBranch() ? '' : '<div class="fa top"><a class="btn btn-line btn-sm" href="#admin-hub-new">' + ico('plus', 16) + ' 거점 등록</a></div>') + tbl(['거점', '주소', '운영 시간', '>보관함 사용', '모임'], hubRows)) : '') +
-      (f('hubOps') ? card('보관함 운영', tbl(['보관 코드', '물품', '거점', '맡긴 분 → 찾을 분', '맡긴 날 · 기한', '상태', ''], stRows, '보관 중인 물품이 없어요. 품온 약속에서 거점 맡기기를 하면 여기에 쌓여요.') + '<p class="small">보관 기한은 7일이에요. 기한이 지나면 맡긴 분에게 알리고, 3일 더 지나면 반환해요. 식품·의약품·고가품은 받지 않아요.</p>') : '') });
+      (f('places') ? card('거점 (전달·모임 장소)', '<div class="fa top"><a class="btn btn-line btn-sm" href="#admin-hub-new">' + ico('plus', 16) + ' 거점 등록</a></div>' + tbl(['거점', '주소', '운영 시간', '>보관함 사용', '모임'], hubRows)) : '') +
+      (f('hubOps') ? card('보관함 운영', tbl(['보관 코드', '물품', '거점', '맡긴 분 → 찾을 분', '맡긴 날 · 기한', '상태', ''], stRows, '보관 중인 물품이 없어요. 품온 약속에서 거점 맡기기를 하면 여기에 쌓여요.') + '<p class="small">맡길 때 글 번호를 확인해 \'전달 대기\'로, 찾아갈 때 인증번호(또는 QR)를 확인해 \'전달 완료\'로 바꿔요. 보관 7일이 지나면 맡긴 분께 알리고, 7일이 더 지나면 기부하거나 정리해요(맡길 때 동의 받음). 보관함보다 큰 물건과 식품·의약품·개봉 화장품은 받지 않아요.</p>') : '') });
   }
+  G.ACT.stoNotice = function (el) { var x = byId(T().storage, el.dataset.id); G.notify(x.from, '[더가넷] 거점에 맡기신 "' + x.item + '" 보관 기한이 지났어요. 7일 안에 찾아가지 않으면 기부하거나 정리해요.'); G.log('거점 보관 기한 알림 ' + x.code); done('맡긴 분께 알렸어요.'); };
   G.ACT.stoSet = function (el) { var x = byId(T().storage, el.dataset.id); x.st = el.dataset.v; x.doneAt = G.now(); G.log('거점 보관 ' + x.code + ' ' + x.st); G.notify(x.from, '[더가넷] 거점에 맡긴 물품(' + x.item + ')이 ' + x.st + ' 처리됐어요.'); done('처리했어요.'); };
   function branchDetail(id) {
     var b = G.branch(id); if (!b) return A({ title: '가맹점', heading: '가맹점을 찾을 수 없어요', html: back('admin-branches', '목록') });
@@ -198,13 +200,16 @@
       kpis([['동네 회원', mem.length], ['서비스 신청', apps.length], ['품온 약속', deals.length], ['사전 신청', pre.length + (T().preorderBase[id] || 0)], ['이벤트', ev.length]], 'k5') +
       '<div class="ag ag2 mt"><div>' + card('상세 이력 (최신순)', tbl(['일시', '구분', '내용'], hist.slice(0, 30).map(function (h) { return '<tr' + (h[3] ? ' class="lk" data-act="goto" data-to="' + h[3] + '"' : '') + '><td>' + esc(String(h[0]).slice(0, 16)) + '</td><td><span class="tag">' + h[1] + '</span></td><td>' + esc(h[2]) + '</td></tr>'; }), '이력이 없어요.')) +
       card('동네 회원', tbl(['회원', '유형', '동네 확인', '등급'], mem.map(function (u) { var m = T().mem[u]; return '<tr class="lk" data-act="goto" data-to="admin-member-' + u + '"><td>' + esc(nm(u)) + '</td><td>' + esc(m.type) + '</td><td>' + (T().localOk[u] ? '<span class="bd bd-ok">' + T().localOk[u] + '</span>' : '-') + '</td><td>' + esc(PLANS[G.planOf(u)][0]) + '</td></tr>'; }))) + '</div><div>' +
-      card('필수 정보', '<dl class="sum">' + info.map(function (i) { return '<div class="kv"><dt>' + i[0] + '</dt><dd>' + esc(i[1]) + '</dd></div>'; }).join('') + '</dl>' + (isBranch() ? '' : '<a class="btn btn-line btn-sm" href="#admin-branchedit-' + id + '">정보 수정</a>')) +
+      card('필수 정보', '<dl class="sum">' + info.map(function (i) { return '<div class="kv"><dt>' + i[0] + '</dt><dd>' + esc(i[1]) + '</dd></div>'; }).join('') + '</dl>' + (isBranch() ? '<a class="btn btn-line btn-sm" href="#admin-branchedit-' + id + '">연락처·운영 정보 수정</a><p class="small">사업자등록번호·대표자·계약 정보는 본사에서만 바꿀 수 있어요.</p>' : '<a class="btn btn-line btn-sm" href="#admin-branchedit-' + id + '">정보 수정</a>')) +
       card('거점', '<ul class="mng">' + T().hubs.filter(function (h) { return h.branch === id; }).map(function (h) { return '<li><div><b>' + esc(h.name) + '</b><small>' + esc(h.addr) + '</small></div><a class="btn btn-line btn-sm" href="#admin-hub-' + h.id + '">관리</a></li>'; }).join('') + '</ul>') + '</div></div>' });
   }
   var BF = [['name', '가맹점명 *'], ['code', '가맹점 코드 *'], ['bizNo', '사업자등록번호 *'], ['owner', '대표자 *'], ['bizType', '업태 *'], ['bizItem', '종목 *'], ['addr', '주소 *'], ['phone', '대표 연락처 *'], ['manager', '매니저(담당자) *'], ['email', '이메일 *'], ['hours', '운영 시간'], ['contract', '계약 기간'], ['kind', '형태 (매장형/사무실형/무점포)'], ['area', '담당 동네 (쉼표로 구분) *']];
+  var BR_EDIT = ['addr', 'phone', 'manager', 'email', 'hours'];
   function branchForm(id) {
     var isNew = id === 'new', b = isNew ? { area: [] } : G.branch(id); if (!b) return off('branches');
-    return A({ title: '가맹점 정보', heading: isNew ? '가맹점 등록' : b.name, sub: '사업자등록번호·업태·주소·연락처·담당자·이메일은 꼭 입력해요.', html: back('admin-branches', '가맹점 목록') + card('', '<form class="form" data-sub="brSave" data-id="' + id + '" novalidate><div class="fgrid">' + BF.map(function (x) { return fg('bf-' + x[0], x[1], inp('bf-' + x[0], x[0] === 'area' ? (b.area || []).join(', ') : b[x[0]], x[0] === 'bizNo' ? '000-00-00000' : '')); }).join('') + '</div><p class="err" id="bf-e" hidden></p><div class="fa"><button class="btn btn-fill" type="submit">저장</button></div></form>') });
+    if (isBranch() && (isNew || id !== myBranch())) return A({ title: '권한 없음', heading: '접근 권한이 없어요', html: card('', '<p>담당 가맹점 정보만 고칠 수 있어요.</p>') });
+    var lock = function (k) { return isBranch() && BR_EDIT.indexOf(k) < 0; };
+    return A({ title: '가맹점 정보', heading: isNew ? '가맹점 등록' : b.name, sub: '사업자등록번호·업태·주소·연락처·담당자·이메일은 꼭 입력해요.', html: back('admin-branches', '가맹점 목록') + card('', '<form class="form" data-sub="brSave" data-id="' + id + '" novalidate><div class="fgrid">' + BF.map(function (x) { var h = inp('bf-' + x[0], x[0] === 'area' ? (b.area || []).join(', ') : b[x[0]], x[0] === 'bizNo' ? '000-00-00000' : ''); if (lock(x[0])) h = h.replace('<input ', '<input readonly class="ro" '); return fg('bf-' + x[0], x[1] + (lock(x[0]) ? ' <small>(본사 관리)</small>' : ''), h); }).join('') + '</div><p class="err" id="bf-e" hidden></p><div class="fa"><button class="btn btn-fill" type="submit">저장</button></div></form>') });
   }
   G.SUB.brSave = function (fm) {
     var id = fm.dataset.id, o = {}, miss = [];
@@ -212,14 +217,16 @@
     if (!miss.length && !/^\d{3}-\d{2}-\d{5}$/.test(o.bizNo)) miss.push('사업자등록번호 형식(000-00-00000)');
     if (miss.length) { var e = $('bf-e'); e.textContent = '확인해 주세요: ' + miss.join(', '); e.hidden = false; return; }
     o.area = o.area.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (isBranch()) { var bb = G.branch(id), ch = []; BR_EDIT.forEach(function (k) { if (bb[k] !== o[k]) { ch.push(k); bb[k] = o[k]; } }); G.log('가맹점 매니저 정보 수정: ' + bb.name + ' (' + (ch.join(', ') || '변경 없음') + ')'); return done('저장했어요. 본사에도 변경 기록이 남아요.', 'admin-branch-' + id); }
     if (id === 'new') { o.id = 'B' + (T().branches.length + 1); T().branches.push(o); } else Object.assign(G.branch(id), o);
     G.log('가맹점 정보 저장: ' + o.name); done('저장했어요.', 'admin-branches');
   };
   var HF = [['name', '거점 이름 *'], ['kind', '구분 (가맹점/제휴) *'], ['addr', '주소 *'], ['near', '찾아오는 길 (큰 건물·출구 기준) *'], ['hours', '운영 시간 *'], ['phone', '연락처 *'], ['lockers', '보관함 칸 수'], ['facil', '편의 (쉼표로 구분: 엘리베이터, 경사로, 화장실 등)']];
   function hubForm(id) {
     var isNew = id === 'new', h = isNew ? { branch: myBranch() || 'B1', facil: [], lockers: 0, meet: false, x: 0.5, y: 0.5 } : G.hub(id); if (!h) return off('places');
+    if (isBranch() && h.branch !== myBranch()) return A({ title: '권한 없음', heading: '접근 권한이 없어요', html: card('', '<p>담당 가맹점의 거점만 관리할 수 있어요.</p>') });
     return A({ title: '거점', heading: isNew ? '거점 등록' : h.name, sub: '어르신도 찾기 쉽게 큰 건물·출구 기준으로 찾아오는 길을 적어요.', html: back('admin-branches', '가맹점·거점') + card('', '<form class="form" data-sub="hubSave" data-id="' + id + '" novalidate><div class="fgrid">' +
-      fg('hf-branch', '가맹점', sel('hf-branch', T().branches.map(function (b) { return [b.id, b.name]; }), h.branch)) + HF.map(function (x) { return fg('hf-' + x[0], x[1], inp('hf-' + x[0], x[0] === 'facil' ? (h.facil || []).join(', ') : h[x[0]])); }).join('') +
+      fg('hf-branch', '가맹점', sel('hf-branch', branchList().map(function (b) { return [b.id, b.name]; }), h.branch)) + HF.map(function (x) { return fg('hf-' + x[0], x[1], inp('hf-' + x[0], x[0] === 'facil' ? (h.facil || []).join(', ') : h[x[0]])); }).join('') +
       '<div class="fg"><span class="lb">모임</span><label class="chk"><input type="checkbox" id="hf-meet"' + (h.meet ? ' checked' : '') + '> 모임 장소로 쓸 수 있어요</label></div></div><p class="err" id="hf-e" hidden></p><div class="fa"><button class="btn btn-fill" type="submit">저장</button></div></form>') });
   }
   G.SUB.hubSave = function (fm) {
@@ -289,12 +296,14 @@
 
   /* ================= 분쟁 ================= */
   var DSTEP = ['접수', '상대방 진술', '검토', '결정', '종결'];
+  var hrs = function (a, b) { return (Date.parse(String(b).replace(' ', 'T')) - Date.parse(String(a).replace(' ', 'T'))) / 36e5; };
+  G.dspLate = function (d) { return d.status !== '종결' && !d.contactAt && hrs(d.at, G.now()) > 24; };
   G.COMP = [['약속 시간 30분 이상 늦음', '해당 회차 10% 할인 또는 다음 이용 이용권'], ['약속한 범위의 일부를 하지 않음', '못한 부분 무료 재방문 또는 부분 환불'], ['작업 결과가 약속과 다름', '재작업 1회 무료, 재작업이 안 되면 해당 금액 환불'], ['물건 파손·분실', '수리비 또는 시가 보상 (배상 보험 처리)'], ['방문 인력의 불친절·불쾌한 언행', '사과와 인력 교체, 해당 회차 할인'], ['연락 없이 오지 않음', '전액 환불과 다음 이용 이용권']];
   function disputes() {
     var l = T().disputes;
     return A({ title: '분쟁 처리', heading: '분쟁 처리', sub: '24시간 안에 첫 연락, 7일 안에 결정을 원칙으로 해요. 상대방 진술을 꼭 받은 뒤 결정해요.', html:
-      kpis([['진행 중', l.filter(function (d) { return d.status !== '종결'; }).length], ['기한 넘김', l.filter(function (d) { return d.status !== '종결' && G.addDays(d.at, 7) < SITE.today; }).length], ['종결', l.filter(function (d) { return d.status === '종결'; }).length], ['보상 기준', G.COMP.length + '개']]) +
-      card('분쟁 목록', tbl(['접수', '대상', '유형', '단계', '결정 기한'], l.map(function (d) { var due = G.addDays(d.at, 7); return '<tr class="lk" data-act="goto" data-to="admin-dispute-' + d.id + '"><td>' + esc(d.at) + '<small class="blk">' + d.id + '</small></td><td>' + esc(d.app || d.deal || '') + ' · ' + esc(nm(d.user)) + '</td><td>' + esc(d.type) + '</td><td><span class="bd bd-' + (d.status === '종결' ? 'ok' : 'warn') + '">' + d.status + '</span></td><td>' + (d.status !== '종결' && due < SITE.today ? '<span class="bd bd-bad">' + due + '</span>' : due) + '</td></tr>'; }))) +
+      kpis([['진행 중', l.filter(function (d) { return d.status !== '종결'; }).length], ['첫 연락 24시간 넘김', l.filter(G.dspLate).length, '', l.some(G.dspLate) ? 'bad' : ''], ['결정 기한(7일) 넘김', l.filter(function (d) { return d.status !== '종결' && G.addDays(d.at, 7) < SITE.today; }).length], ['종결', l.filter(function (d) { return d.status === '종결'; }).length], ['보상 기준', G.COMP.length + '개']]) +
+      card('분쟁 목록', tbl(['접수', '대상', '유형', '단계', '첫 연락', '결정 기한'], l.map(function (d) { var due = G.addDays(d.at, 7); return '<tr class="lk" data-act="goto" data-to="admin-dispute-' + d.id + '"><td>' + esc(d.at) + '<small class="blk">' + d.id + '</small></td><td>' + esc(d.app || d.deal || '') + ' · ' + esc(nm(d.user)) + '</td><td>' + esc(d.type) + '</td><td><span class="bd bd-' + (d.status === '종결' ? 'ok' : 'warn') + '">' + d.status + '</span></td><td>' + (d.contactAt ? esc(d.contactAt.slice(5)) : G.dspLate(d) ? '<span class="bd bd-bad">24시간 넘김</span>' : '<span class="bd bd-warn">연락 전</span>') + '</td><td>' + (d.status !== '종결' && due < SITE.today ? '<span class="bd bd-bad">' + due + '</span>' : due) + '</td></tr>'; }))) +
       card('보상 기준표 (가넷 안심 약속)', tbl(['상황', '보상'], G.COMP.map(function (c) { return '<tr><td>' + c[0] + '</td><td>' + c[1] + '</td></tr>'; }))) });
   }
   function disputeDetail(id) {
@@ -302,12 +311,13 @@
     var i = DSTEP.indexOf(d.status);
     return A({ title: '분쟁 ' + id, heading: '분쟁 ' + id, sub: d.type + ' · ' + nm(d.user), html: back('admin-disputes', '분쟁 목록') + '<div class="ag"><div>' +
       card('진행 단계', '<ol class="stp">' + DSTEP.map(function (s, k) { return '<li class="' + (k < i ? 'done' : k === i ? 'cur' : '') + '"><span class="stp-n">' + (k < i ? ico('check', 14) : k + 1) + '</span><span class="stp-t">' + s + '</span></li>'; }).join('') + '</ol>' +
-        '<dl class="sum mt"><div class="kv"><dt>신청 내용</dt><dd>' + G.nl(d.text) + '</dd></div><div class="kv"><dt>첨부</dt><dd>' + esc(d.file || '-') + '</dd></div><div class="kv"><dt>첫 연락</dt><dd>' + esc(d.contactAt || '-') + '</dd></div><div class="kv"><dt>상대방 진술</dt><dd>' + (d.counter ? G.nl(d.counter) : '<span class="bd bd-warn">받기 전</span>') + '</dd></div><div class="kv"><dt>결정</dt><dd>' + (d.decision ? esc(d.decision) + (d.comp ? '<br><b>' + esc(d.comp) + '</b>' : '') : '-') + '</dd></div></dl>') + '</div><div>' +
+        '<dl class="sum mt"><div class="kv"><dt>신청 내용</dt><dd>' + G.nl(d.text) + '</dd></div><div class="kv"><dt>첨부</dt><dd>' + esc(d.file || '-') + '</dd></div><div class="kv"><dt>첫 연락 (24시간 안)</dt><dd>' + (d.contactAt ? esc(d.contactAt) : (G.dspLate(d) ? '<span class="bd bd-bad">기한 경과</span> ' : '') + '<button class="btn btn-line btn-sm" data-act="dspContact" data-id="' + d.id + '">지금 연락했어요</button>') + '</dd></div><div class="kv"><dt>상대방 진술</dt><dd>' + (d.counter ? G.nl(d.counter) : '<span class="bd bd-warn">받기 전</span>') + '</dd></div><div class="kv"><dt>결정</dt><dd>' + (d.decision ? esc(d.decision) + (d.comp ? '<br><b>' + esc(d.comp) + '</b>' : '') : '-') + '</dd></div></dl>') + '</div><div>' +
       (d.status === '종결' ? card('', '<p class="small">종결된 분쟁이에요.</p>') : card('처리', '<form class="form" data-sub="dspStep" data-id="' + id + '" novalidate>' +
         (i <= 1 ? fg('ds-c', '상대방(업체·회원) 진술', '<textarea id="ds-c" rows="3" placeholder="상대방에게 받은 진술을 적어요.">' + esc(d.counter) + '</textarea>') : '') +
         (i >= 1 ? fg('ds-k', '보상 기준', sel('ds-k', [['', '해당 없음']].concat(G.COMP.map(function (c) { return [c[1], c[0]]; })), d.comp)) + fg('ds-m', '결정 내용 (고객에게 보여요)', '<textarea id="ds-m" rows="3">' + esc(d.decision) + '</textarea>') : '') +
         '<p class="err" id="ds-e" hidden></p><div class="fa"><button class="btn btn-fill btn-sm" type="submit">' + (i <= 1 ? '진술 저장 · 검토로' : '결정하고 종결') + '</button></div></form>')) + '</div></div>' });
   }
+  G.ACT.dspContact = function (el) { var d = byId(T().disputes, el.dataset.id); d.contactAt = G.now(); if (d.status === '접수') d.status = '상대방 진술'; G.log('분쟁 ' + d.id + ' 첫 연락'); done('첫 연락을 기록했어요.'); };
   G.SUB.dspStep = function (fm) {
     var d = byId(T().disputes, fm.dataset.id), i = DSTEP.indexOf(d.status), e = $('ds-e');
     if (i <= 1) { var c = val('ds-c'); if (c.length < 5) { e.textContent = '상대방 진술 없이 결정할 수 없어요. 진술을 적어 주세요.'; e.hidden = false; return; } d.counter = c; d.status = '검토'; if (!d.contactAt) d.contactAt = G.now(); }
@@ -429,8 +439,10 @@
   function safetyItems() {
     var t = T(), out = [];
     MEMBERS.forEach(function (m) { var fam = t.family[m.id]; if (fam && fam.alone && !(fam.receivers || []).length) out.push(['알림 받을 사람 없음', m.name + ' · 가맹점 안심콜 대상', m.id, 'call']); });
-    Object.keys(t.checkins).forEach(function (did) { var c = t.checkins[did]; if (c.in && !c.out) out.push(['만남 종료 미확인', '약속 ' + did + ' · 체크인 ' + c.in, did, 'meet']); });
-    t.notify.filter(function (n) { return n.urgent && !n.read; }).forEach(function (n) { out.push(['중요 알림 미확인', nm(n.to) + ' · ' + n.text.slice(0, 30), n.to, 'notify']); });
+    Object.keys(t.checkins).forEach(function (did) { var c = t.checkins[did]; if (c.in && !c.out) { var over = c.end ? hrs(c.end, G.now()) >= 0.5 : hrs(c.in, G.now()) >= 2.5; out.push([over ? '만남 종료 미확인 (종료 예정 30분 넘김)' : '만남 진행 중 (종료 예정 ' + (c.end || '-') + ')', '약속 ' + did + ' · 체크인 ' + c.in, did, 'meet']); } });
+    var un = {}; t.notify.filter(function (n) { return n.urgent && !n.read; }).forEach(function (n) { (un[n.to] = un[n.to] || []).push(n); });
+    Object.keys(un).forEach(function (u) { out.push(['알림 받을 가족 없음 · 미확인 알림 ' + un[u].length + '건', nm(u) + ' · 최근: ' + un[u][0].text.replace(/^\[더가넷\]\s*/, '').slice(0, 34), u, 'notify']); });
+    if (myBranch()) out = out.filter(function (i) { if (i[3] === 'meet') { var d = G.nbDeal(i[2]); return d && (G.memInfo(d.req).branch === myBranch() || G.memInfo(d.prov).branch === myBranch()); } return G.memInfo(i[2]).branch === myBranch(); });
     return out;
   }
   function safety() {
@@ -478,7 +490,7 @@
     T().projects.forEach(function (p) { if (hit(p.title) || hit(p.target)) rows.push(['나눔 사업', p.title, 'admin-proj-' + p.id]); });
     T().corps.forEach(function (c) { if (hit(c.name) || hit(c.bizNo)) rows.push(['기업·기관', c.name, 'admin-corp-' + c.id]); });
     S.inquiries.forEach(function (x) { if (hit(x.text) || hit(x.id)) rows.push(['문의', x.id + ' · ' + x.text.slice(0, 30), 'admin-inq']); });
-    if (myBranch()) rows = rows.filter(function (r) { return ['회원', '신청', '가맹점'].indexOf(r[0]) >= 0; });
+    if (myBranch()) rows = rows.filter(function (r) { if (['회원', '신청', '가맹점'].indexOf(r[0]) < 0) return false; if (r[0] === '회원') return G.memInfo(r[2].replace('admin-member-', '')).branch === myBranch(); if (r[0] === '신청') return G.branchOfRegion((G.app(r[2].replace('admin-app-', '')) || {}).region) === myBranch(); return r[2] === 'admin-branch-' + myBranch(); });
     G.log('통합 검색: ' + q, 'VIEW');
     return A({ title: '통합 검색', heading: '"' + q + '" 검색 결과', sub: rows.length + '건 · 검색 기록은 감사 로그에 남아요.', html: card('', tbl(['구분', '내용'], rows.map(function (r) { return '<tr class="lk" data-act="goto" data-to="' + r[2] + '"><td><span class="tag">' + r[0] + '</span></td><td><a href="#' + r[2] + '">' + esc(r[1]) + '</a></td></tr>'; }), '찾는 내용이 없어요.')) });
   }
@@ -493,7 +505,7 @@
     var rt = T().ratings.filter(function (r) { return r.partner === id; }), good = rt.filter(function (r) { return r.level >= 2; }).length;
     var miss = PIF.filter(function (f2) { return f2[1].indexOf('*') > 0 && !x[f2[0]]; }).map(function (f2) { return f2[1].replace(' *', ''); });
     return A({ title: p.name, heading: p.name, sub: id + ' · 등록 ' + p.since + ' · ' + p.area, html: back('admin-partners', '협력업체 목록') +
-      kpis([['처리 신청', apps.length], ['완료', apps.filter(function (a) { return a.status === 'COMPLETED'; }).length], ['정산 금액', G.fmt(sett.reduce(function (s, r) { return s + r.net; }, 0))], ['만족도', rt.length ? Math.round(good / rt.length * 100) + '% (' + rt.length + ')' : '-']]) +
+      kpis([['처리 신청', apps.length], ['완료', apps.filter(function (a) { return a.status === 'COMPLETED'; }).length], ['정산 금액', G.fmt(sett.reduce(function (s, r) { return s + r.net; }, 0))], ['만족도', rt.length >= 5 ? Math.round(good / rt.length * 100) + '% (' + rt.length + ')' + (good / rt.length < 0.8 ? ' · 점검' : '') : '후기 ' + rt.length + '건 (5건부터 공개)', '', rt.length >= 5 && good / rt.length < 0.8 ? 'bad' : '']]) +
       '<div class="ag ag2 mt"><div>' + card('이용 상세 이력', tbl(['신청', '서비스', '고객', '상태', '금액'], apps.map(function (a) { return '<tr class="lk" data-act="goto" data-to="admin-app-' + a.no + '"><td>' + a.no + '<small class="blk">' + G.dshort(a.at) + '</small></td><td>' + esc(G.sv(a.svc).name) + '</td><td>' + esc(nm(a.user)) + '</td><td>' + G.stBadge(a.status) + '</td><td>' + (a.quote ? G.fmt(a.quote.total) : '-') + '</td></tr>'; }))) +
       card('정산 이력', tbl(['신청', '>매출', '>수수료', '>지급액', '상태'], sett.map(function (r) { return '<tr><td>' + r.app.no + '</td><td class="r">' + G.fmt(r.gross) + '</td><td class="r">' + G.fmt(r.fee) + '</td><td class="r">' + G.fmt(r.net) + '</td><td>' + r.st + '</td></tr>'; }))) + '</div><div>' +
       card('필수 정보', (miss.length ? '<div class="callout warn">' + ico('info', 18) + '<div><strong>빠진 필수 정보</strong><p>' + miss.join(', ') + '</p></div></div>' : '') + '<form class="form" data-sub="pinfoSave" data-id="' + id + '" novalidate>' + PIF.map(function (f2) { return fg('pi-' + f2[0], f2[1], inp('pi-' + f2[0], x[f2[0]])); }).join('') + '<p class="err" id="pi-e" hidden></p><div class="fa"><button class="btn btn-fill btn-sm" type="submit">저장</button><a class="btn btn-line btn-sm" href="#admin-partner-' + id + '">기본 정보 수정</a></div></form>') + '</div></div>' });
@@ -519,6 +531,23 @@
       if (f('hubOps') && G.admBadge('admin-branches')) todo.push(['admin-branches', '보관 기한 지남 ' + G.admBadge('admin-branches') + '건']);
       var strip = '<a class="callout nb-strip ft-strip" href="#admin-features">' + ico('sliders', 20) + '<div><strong>단계별 기능 ' + on + ' / ' + tot + ' 켜짐 · 다음: ' + nextStage() + '</strong><p>' + (todo.length ? todo.map(function (x) { return x[1]; }).join(' · ') : '결정안의 진행 단계에 맞춰 기능을 열어 보세요.') + '</p></div>' + ico('chev-right', 18) + '</a>';
       if (me().role !== 'ADMIN') strip = todo.length ? '<div class="callout nb-strip">' + ico('bell', 20) + '<div><strong>확인할 일</strong><p>' + todo.map(function (x) { return '<a class="lnk-i" href="#' + x[0] + '">' + x[1] + '</a>'; }).join(' · ') + '</p></div></div>' : '';
+      if (isBranch()) {
+        todo = todo.filter(function (x) { return branchAllowed(x[0].replace(/^admin-?/, '')); });
+        o.html = o.html.replace(/<a class="callout warn nb-strip" href="#admin-(settle|club)">[\s\S]*?<\/a>/g, '');
+        var b = G.branch(myBranch()) || {}, G2 = [];
+        if (f('branches')) G2.push(['admin-branchedit-' + myBranch(), 'pin', '가맹점 정보', '운영 시간·매니저·연락처·이메일·주소']);
+        if (f('places')) G2.push(['admin-hub-new', 'home', '거점 등록·수정', '찾아오는 길·운영 시간·보관함 칸 수·편의']);
+        if (f('hubOps')) G2.push(['admin-branches', 'lock', '보관함 처리', '인증 확인·전달 완료·기한 알림']);
+        if (f('events')) G2.push(['admin-event-new', 'calendar', '모임·이벤트 만들기', '일시·장소·정원·혜택, 참석 확인과 배지']);
+        if (f('news')) G2.push(['admin-news', 'file', '동네 소식 올리기', '공공 서비스·주민센터·지역 행사']);
+        if (f('preorder')) G2.push(['admin-preorders', 'users', '사전 신청 연락', '오픈 안내 완료 표시']);
+        G2.push(['admin-proxy', 'phone', '대리 가입·전화 접수', '동의 녹취·본인 확인 후 대신 접수']);
+        if (f('localBadge')) G2.push(['admin-members', 'check', '동네 확인', '회원 상세에서 방문 확인 기록']);
+        if (f('staff') || f('workLog')) G2.push(['admin-apps', 'list', '방문 인력·작업 일지', '신청 상세에서 배정하고 일지 기록']);
+        if (f('safety')) G2.push(['admin-safety', 'bell', '안심콜 기록', '혼자 사시는 분 안부 전화']);
+        strip = (todo.length ? '<div class="callout nb-strip">' + ico('bell', 20) + '<div><strong>확인할 일</strong><p>' + todo.map(function (x) { return '<a class="lnk-i" href="#' + x[0] + '">' + x[1] + '</a>'; }).join(' · ') + '</p></div></div>' : '') +
+          '<section class="ac br-in"><h2>' + esc((b.name || '').replace(' (예시)', '')) + ' 매니저가 입력하는 곳</h2><div class="tiles">' + G2.map(function (x) { return '<a class="tile" href="#' + x[0] + '">' + ico(x[1], 22) + '<b>' + x[2] + '</b><span>' + x[3] + '</span></a>'; }).join('') + '</div></section>';
+      }
       o.html = insertAfter(o.html, '</div>', strip);
     }
     if (arg.indexOf('app-') === 0) o.html = appExtra(arg.slice(4), o.html);
@@ -531,7 +560,29 @@
     }
     if (arg === 'partners' && f('partnerInfo')) { o.html = o.html.replace(/data-to="admin-partner-/g, 'data-to="admin-pinfo-').replace(/href="#admin-partner-(P\d+)"/g, 'href="#admin-pinfo-$1"'); o.sub = '업체명을 누르면 필수 정보·이용 상세 이력·정산 이력을 볼 수 있어요.'; }
     if (arg === 'accounts' && f('branchManager')) { o.html = o.html.replace('<option value="ADMIN">최고관리자 (전체 권한)</option>', '<option value="ADMIN">최고관리자 (전체 권한)</option><option value="BRANCH">가맹점 매니저 (담당 동네)</option>'); }
-    if (arg === 'apps' && myBranch()) o.sub = (o.sub || '') + ' · 담당 동네: ' + (G.branch(myBranch()) || {}).name;
+    if (arg === 'apps' && myBranch()) {
+      o.sub = (o.sub || '') + ' · 담당 동네: ' + (G.branch(myBranch()) || {}).name;
+      o.mount = (function (m0) { return function () { if (m0) m0(); document.querySelectorAll('#app [data-to^="admin-app-"]').forEach(function (r) { var a = G.app(r.getAttribute('data-to').slice(10)); if (a && G.branchOfRegion(a.region) !== myBranch()) r.remove(); }); }; })(o.mount);
+    }
+    if (me().role !== 'ADMIN' && o.html) o.html = o.html.replace(/<a[^>]*href="#admin-svcs?(-[^"]*)?"[^>]*>[\s\S]*?<\/a>/g, '');
+    if (f('pumon') && G.pumonSvc && o.html) {
+      if (arg === 'club-posts' || arg === 'club') o.html = o.html.replace(/(data-to="admin-club-post-(\w+)"[^>]*>\s*<td>)/g, function (m0, a0, id) { var pp = G.nbPost(id); return pp ? a0 + '<span class="bd bd-pm bd-pm-' + G.pumonSvc(pp) + '">' + G.PUMON[G.pumonSvc(pp)].name + '</span> ' : a0; });
+      if (arg.indexOf('club-post-') === 0) {
+        var pp = G.nbPost(arg.slice(10));
+        if (pp) {
+          var k = G.pumonSvc(pp), txt = pp.title + ' ' + pp.body, warn = [];
+          if (f('pumonCheck')) {
+            if ((k === 'GIVE' || k === 'SWAP') && pp.pay !== 'FREE') warn.push(G.PUMON[k].name + '인데 금액이 있어요');
+            if ((k === 'GIVE' || k === 'SWAP') && /(식품|음식|반찬|의약|약품|영양제|건강기능|화장품|담배|술|주류|강아지|고양이|분양|카시트|분유)/.test(txt)) warn.push('금지 품목으로 보이는 말이 있어요');
+            if (k === 'HELP' && pp.pay === 'PAID') warn.push('서로품은 유료가 안 돼요');
+            if (k === 'HELP' && /(대신\s?(결제|송금|입금)|대리\s?(운전|결제|수령|서명)|운전\s?대행|보증)/.test(txt)) warn.push('대행으로 보이는 말이 있어요');
+          }
+          var infoC = card('품온 구분 · 자동 점검', '<dl class="sum"><div class="kv"><dt>서비스</dt><dd><span class="bd bd-pm bd-pm-' + k + '">' + G.PUMON[k].name + '</span> ' + esc(G.PUMON[k].line) + '</dd></div>' + (pp.item ? '<div class="kv"><dt>물건 상태</dt><dd>' + esc(pp.item) + '</dd></div><div class="kv"><dt>주고받기</dt><dd>' + (pp.delivery === 'HUB' ? '거점 맡기기 · ' + esc((G.hub(pp.hub) || {}).name || '') : '직접 만나기') + '</dd></div>' : '') + '<div class="kv"><dt>작성자 동네</dt><dd>' + esc((G.branch(G.memInfo(pp.owner).branch) || {}).name || '미지정') + (T().localOk[pp.owner] ? ' · 동네 확인' : '') + '</dd></div></dl>' +
+            (warn.length ? '<div class="callout warn">' + ico('info', 18) + '<div><strong>확인해 주세요</strong><p>' + warn.join(' · ') + '</p></div></div>' : '<p class="small">' + ico('check', 14) + ' 자동 점검에서 걸린 것이 없어요.</p>'));
+          o.html = insertBefore(o.html, '<section class="ac', infoC);
+        }
+      }
+    }
     return o;
   }
   function appExtra(no, h) {
@@ -591,4 +642,24 @@
   G.INP.mhFilter = function (el) { var q = el.value.trim().toLowerCase(); document.querySelectorAll('tr.mh').forEach(function (r) { r.hidden = q && r.textContent.toLowerCase().indexOf(q) < 0; }); };
   G.ACT.localOk = function (el) { var u = el.dataset.u; T().localOk[u] = SITE.today; G.notify(u, '[더가넷] 동네 확인을 마쳤어요. 품온 글에 "동네 확인" 배지가 붙어요.'); G.log(nm(u) + ' 동네 확인 완료'); done('동네 확인을 기록했어요.'); };
   G.ACT.goto = G.ACT.goto || function (el) { G.go(el.dataset.to); };
+
+  /* ================= 협력업체 포털 덧붙이기 ================= */
+  var oPartner = P.partner;
+  P.partner = function () {
+    var o = oPartner();
+    if (!(f('workLog') || f('staff') || f('partnerInfo') || f('rating3'))) return o;
+    var me2 = byId(PARTNERS, S.partnerView) || PARTNERS[0], live = S.apps.filter(function (a) { return a.partner === me2.id && ['APPROVED', 'SCHEDULED', 'IN_PROGRESS'].indexOf(a.status) >= 0; }), add = '';
+    if (f('workLog') || f('staff')) add += '<section class="ac"><h2>작업 일지 · 방문 인력</h2>' + (live.length ? live.map(function (a) {
+      var wl = T().worklog[a.no] || [], w = byId(T().staff, T().appStaff[a.no]), mine = T().staff.filter(function (x) { return x.org === me2.id; });
+      return '<div class="pt-wl"><p><b>' + a.no + '</b> ' + esc(G.sv(a.svc).name) + ' ' + G.stBadge(a.status) + (wl.length ? ' <span class="small">일지 ' + wl.length + '건 · 최근 ' + esc(wl[wl.length - 1][1]) + '</span>' : '') + '</p>' +
+        (f('staff') ? '<form class="inl" data-sub="ptStaff" data-no="' + a.no + '">' + sel('pts-' + a.no, [['', '방문 인력 선택']].concat(mine.map(function (x) { return [x.id, x.name + ' · ' + x.role]; })), w ? w.id : '', ' aria-label="방문 인력"') + '<button class="btn btn-line btn-sm" type="submit">배정</button>' + (w ? ' <span class="small">현재 ' + esc(w.name) + '</span>' : '') + '</form>' : '') +
+        (f('workLog') ? '<form class="inl" data-sub="ptLog" data-no="' + a.no + '">' + sel('ptk-' + a.no, ['시작', '중간', '종료', '특이사항'], '시작', ' aria-label="구분"') + '<input id="ptt-' + a.no + '" placeholder="작업 내용 (고객에게 알림이 가요)" aria-label="작업 내용"><input id="ptf-' + a.no + '" placeholder="사진 파일명" aria-label="사진"><button class="btn btn-fill btn-sm" type="submit">기록</button></form>' : '') + '</div>';
+    }).join('') : '<p class="small">지금 진행 중인 작업이 없어요.</p>') + '</section>';
+    if (f('partnerInfo')) { var x = pinfo(me2.id), miss = PIF.filter(function (q) { return q[1].indexOf('*') > 0 && !x[q[0]]; }).map(function (q) { return q[1].replace(' *', ''); }); add += '<section class="ac"><h2>우리 업체 필수 정보</h2>' + (miss.length ? '<div class="callout warn">' + ico('info', 18) + '<div><strong>더가넷에 보내 주세요</strong><p>' + miss.join(', ') + '</p></div></div>' : '<p class="small">' + ico('check', 14) + ' 필수 정보가 모두 등록돼 있어요.</p>') + '<p class="small">정보 변경은 더가넷 운영팀이 서류를 확인한 뒤 반영해요.</p></section>'; }
+    if (f('rating3')) { var rt = T().ratings.filter(function (r) { return r.partner === me2.id; }), gd = rt.filter(function (r) { return r.level >= 2; }).length; add += '<section class="ac"><h2>고객 만족도</h2><p>' + (rt.length >= 5 ? '<b>' + Math.round(gd / rt.length * 100) + '%</b> (' + rt.length + '명 평가)' + (gd / rt.length < 0.8 ? ' <span class="bd bd-bad">80% 미만 · 본사 점검 대상</span>' : '') : '평가 ' + rt.length + '건 · 5건이 모이면 고객 화면에 공개돼요.') + '</p>' + (G.partnerReplies ? G.partnerReplies(me2.id) : '') + '</section>'; }
+    o.html = o.html.replace('</main>', add + '</main>');
+    return o;
+  };
+  G.SUB.ptStaff = function (fm) { var no = fm.dataset.no, w = byId(T().staff, val('pts-' + no)); if (!w) return G.toast('방문 인력을 골라 주세요.'); var bad = ['id', 'health', 'ins'].filter(function (k) { var v = w.badges[k]; return !v || v < SITE.today; }); if (bad.length) return G.toast('신원·건강·보험 배지가 없거나 만료된 인력은 배정할 수 없어요.'); var a = G.app(no); T().appStaff[no] = w.id; G.notify(a.user, '[더가넷] ' + G.sv(a.svc).name + ' 방문 담당자는 ' + w.name + ' ' + w.role + '예요.'); G.log(no + ' 협력업체 방문 인력 배정: ' + w.name); done('배정했어요. 고객에게 미리 알렸어요.'); };
+  G.SUB.ptLog = function (fm) { var no = fm.dataset.no, t = val('ptt-' + no); if (!t) return G.toast('작업 내용을 적어 주세요.'); var a = G.app(no); (T().worklog[no] = T().worklog[no] || []).push([val('ptk-' + no), G.now(), t, val('ptf-' + no)]); G.notify(a.user, '[더가넷] ' + G.sv(a.svc).name + ' ' + val('ptk-' + no) + ': ' + t); G.log(no + ' 협력업체 작업 일지'); done('기록하고 고객에게 알렸어요.'); };
 })();
