@@ -1,7 +1,9 @@
-# 마음생활서비스 — 웹 미리보기
+# 더가넷 — 웹 미리보기
 
 생활돌봄 서비스 더가넷의 시연용 웹사이트입니다. (정적 페이지, 서버 불필요)
 실제 결제·접수·후원금 수령은 이루어지지 않습니다.
 
+- 사이트: https://willbeok1004-dohyun.github.io/thegarnet/
+- 시연 모드: 주소 끝에 ?demo=1 을 붙여 여세요.
 - 고객 시연 계정: demo@thegarnet.example / Garnet!2345
-- 관리자: 주소 뒤에 `#admin` → admin / Admin!2345
+- 관리자: 주소 끝에 #admin → admin / Admin!2345
