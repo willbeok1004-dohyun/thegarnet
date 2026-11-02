@@ -55,16 +55,47 @@
 
   /* ================= 마이 라이프 프로필 ================= */
   var prof = function () { return S.profile || (S.profile = {}); };
+  /* 음력 ↔ 양력: 브라우저에 들어 있는 한국 음력(단기력) 계산을 쓰고, 지원하지 않는 브라우저에서는 양력 날짜를 직접 적게 해요 */
+  var DG = null;
+  try { DG = new Intl.DateTimeFormat('en-US-u-ca-dangi', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'numeric', day: 'numeric' }); if (!DG.formatToParts(new Date(Date.UTC(2026, 1, 17, 3))).some(function (x) { return x.type === 'relatedYear'; })) DG = null; } catch (e) { DG = null; }
+  var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
+  function lparts(y, m, d) { var o = {}; DG.formatToParts(new Date(Date.UTC(y, m - 1, d, 3, 0, 0))).forEach(function (q) { o[q.type] = q.value; }); return { y: +o.relatedYear, m: parseInt(o.month, 10), d: +o.day, leap: /bis|윤/.test(String(o.month)) }; }
+  G.calOk = function () { return !!DG; };
+  G.lunarOf = function (iso) {
+    if (!DG || !iso) return null; var a = String(iso).split('-').map(Number);
+    if (a.length !== 3 || !a[0] || !a[1] || !a[2] || a[0] < 1900 || a[0] > 2100) return null;
+    try { return lparts(a[0], a[1], a[2]); } catch (e) { return null; }
+  };
+  G.solarOf = function (iso, leap) {
+    if (!DG || !iso) return null; var a = String(iso).split('-').map(Number);
+    if (a.length !== 3 || !a[0] || !a[1] || !a[2] || a[0] < 1900 || a[0] > 2099 || a[1] > 12 || a[2] > 30) return null;
+    var t = Date.UTC(a[0], 0, 15), end = Date.UTC(a[0] + 1, 1, 25);
+    for (; t <= end; t += 864e5) { var dt = new Date(t), l = lparts(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate()); if (l.y === a[0] && l.m === a[1] && l.d === a[2] && l.leap === !!leap) return dt.getUTCFullYear() + '-' + pad2(dt.getUTCMonth() + 1) + '-' + pad2(dt.getUTCDate()); }
+    return null;
+  };
+  var lunarTxt = function (l) { return (l.leap ? '윤' : '') + l.m + '월 ' + l.d + '일'; };
+  var dateTxt = function (iso) { var d = String(iso).split('-'); return d[0] + '년 ' + (+d[1]) + '월 ' + (+d[2]) + '일'; };
+  /* 입력 중에 보여 주는 한 줄 안내 */
+  function convText(b, cal, leap) {
+    if (!b) return cal === 'unknown' ? '양력인지 음력인지 몰라도 괜찮아요. 입력한 날짜 그대로 저장해요.' : '';
+    if (cal === 'unknown') return '양력인지 음력인지 몰라서, 입력한 날짜 그대로 저장해요.';
+    if (!DG) return cal === 'lunar' ? '이 브라우저에서는 자동 변환을 쓸 수 없어요. 양력 날짜를 직접 적어 주세요.' : '';
+    if (cal === 'lunar') { var so = G.solarOf(b, leap); return so ? '양력으로는 ' + dateTxt(so) + '이에요.' : '이 날짜는 음력에 없어요. 달과 일, 윤달 체크를 다시 확인해 주세요.'; }
+    var l = G.lunarOf(b); return l ? '음력으로는 ' + lunarTxt(l) + '이에요.' : '';
+  }
   function birthText(p) {
     p = p || prof(); if (!p.birth) return '';
     var d = p.birth.split('-'), cal = { solar: '양력', lunar: '음력', unknown: '양력·음력 모름' }[p.cal || 'solar'];
     var tm = p.btime && p.btime !== 'none' && p.btime !== 'unknown' ? ' · ' + p.btime + '(' + (SIJIN.filter(function (s) { return s[0] === p.btime; })[0] || ['', ''])[1] + ')' : p.btime === 'unknown' ? ' · 태어난 시 모름' : '';
-    return d[0] + '년 ' + (+d[1]) + '월 ' + (+d[2]) + '일 (' + cal + ')' + (p.cal === 'lunar' && p.solar ? ' · 양력 ' + p.solar : '') + tm;
+    var extra = '';
+    if (p.cal === 'lunar') extra = (p.leap ? ' · 윤달' : '') + (p.solar ? ' · 양력 ' + p.solar : '');
+    else if ((p.cal || 'solar') === 'solar') { var l = G.lunarOf(p.birth); if (l) extra = ' · 음력 ' + lunarTxt(l); }
+    return d[0] + '년 ' + (+d[1]) + '월 ' + (+d[2]) + '일 (' + cal + ')' + extra + tm;
   }
   G.birthText = birthText;
   function symMD() { var p = prof(), s = p.cal === 'lunar' ? p.solar : p.birth; if (!s || p.cal === 'unknown' && !p.birth) return null; var d = s.split('-'); return d.length === 3 ? [+d[1], +d[2]] : null; }
   function symHtml() {
-    var md = symMD(); if (!md) return '<p class="small">' + (prof().cal === 'lunar' ? '음력 생일은 탄생 상징(양력 기준)을 바로 계산할 수 없어요. 양력 날짜를 알면 함께 적어 주세요.' : '생년월일을 넣으면 탄생석·탄생화·탄생목·별자리를 보여 드려요.') + '</p>';
+    var md = symMD(); if (!md) return '<p class="small">' + (prof().cal === 'lunar' ? '음력 생일의 탄생 상징은 양력 날짜로 보여 드려요. 생년월일을 올바르게 입력해 주세요.' : '생년월일을 넣으면 탄생석·탄생화·탄생목·별자리를 보여 드려요.') + '</p>';
     var m = md[0], d = md[1];
     return '<ul class="sym-l"><li><span>탄생석</span><b>' + STONES[m - 1] + '</b></li><li><span>탄생화</span><b>' + FLOWERS[m - 1] + '</b></li><li><span>탄생목</span><b>' + TREES[m - 1] + '</b></li><li><span>별자리</span><b>' + zodiac(m, d) + '</b></li></ul>';
   }
@@ -72,9 +103,12 @@
     var p = prof(), sz = G.sizeText ? G.sizeText() : '';
     var szs = '<div class="fgrid"><div class="fg"><label class="lb" for="p-c">의류 사이즈</label>' + sel('p-c', [['', '선택하지 않음']].concat(['SS', 'S', 'M', 'L', 'XL', 'XXL']), p.clothes || '') + '</div><div class="fg"><label class="lb" for="p-s">신발 사이즈 (mm)</label>' + sel('p-s', [['', '선택하지 않음']].concat(Array.apply(null, Array(21)).map(function (_, i) { return String(200 + i * 5); })), p.shoe || '') + '</div>' +
       fg('p-r', '반지 호수', inp('p-r', p.ring, '예: 12호')) + fg('p-col', '선호 색상', sel('p-col', [['', '선택 안 함']].concat(['아이보리', '가넷', '그린', '파스텔', '블랙']), p.color || '')) + fg('p-m', '기념일 메모', '<textarea id="p-m" rows="2" placeholder="가족·지인의 실명이나 상세 정보는 적지 마세요.">' + esc(p.memo || '') + '</textarea>', 'full') + '</div>';
-    var birth = '<div class="fgrid">' + fg('p-b', '생년월일', inp('p-b', p.birth, '', 'date')) + fg('p-cal', '양력·음력', sel('p-cal', [['solar', '양력'], ['lunar', '음력'], ['unknown', '모름']], p.cal || 'solar', ' data-on="change:pCal"')) +
-      '<div class="fg" id="p-sol-g"' + (p.cal === 'lunar' ? '' : ' hidden') + '><label class="lb" for="p-sol">양력 날짜 <em class="opt">알면</em></label>' + inp('p-sol', p.solar, '', 'date') + '</div>' +
+    var cv = convText(p.birth, p.cal || 'solar', p.leap);
+    var birth = '<div class="fgrid">' + fg('p-b', '생년월일', inp('p-b', p.birth, '', 'date').replace('<input ', '<input data-on="change:pConv" ')) + fg('p-cal', '양력·음력', sel('p-cal', [['solar', '양력'], ['lunar', '음력'], ['unknown', '모름']], p.cal || 'solar', ' data-on="change:pCal"')) +
+      '<div class="fg" id="p-lp-g"' + (p.cal === 'lunar' ? '' : ' hidden') + '><label class="chk"><input type="checkbox" id="p-leap" data-on="change:pConv"' + (p.leap ? ' checked' : '') + '><span>윤달이에요</span></label></div>' +
+      '<div class="fg" id="p-sol-g"' + (p.cal === 'lunar' ? '' : ' hidden') + '><label class="lb" for="p-sol">양력 날짜 <em class="opt">' + (DG ? '자동 계산' : '직접 적어 주세요') + '</em></label>' + inp('p-sol', p.solar, '', 'date').replace('<input ', '<input' + (DG ? ' readonly' : '') + ' ') + '</div>' +
       fg('p-t', '태어난 시', sel('p-t', [['none', '선택 안 함'], ['unknown', '모름']].concat(SIJIN.map(function (s) { return [s[0], s[0] + ' (' + s[1] + ')']; })), p.btime || 'none')) + '</div>' +
+      '<p class="small pf-cv" id="p-cv" aria-live="polite">' + esc(cv) + '</p>' +
       '<label class="chk"><input type="checkbox" id="p-bok"' + (p.birthOk ? ' checked' : '') + '><span><b>[선택 동의]</b> 탄생 정보를 저장하고, 탄생 상징 주얼리·사주·풍수 상담, 꽃·인테리어 공간 배치, 침구·소품 제안 신청서에서 <b>함께 보내기</b>를 체크할 때만 전달하는 데 동의해요. 언제든 지울 수 있어요.</span></label>';
     var body = '<form class="card form" data-sub="profile"><p class="small mb">선물·맞춤 제작·공간 제안에 쓰이는 선택 정보예요. 입력하지 않아도 모든 서비스를 이용할 수 있고, 신청서에서 직접 체크할 때만 전달돼요.</p>' +
       '<h3 class="pf-h">' + ico('gift', 18) + ' 사이즈 <a class="lnk-i" href="#special">특별한 날에서 쓰여요</a></h3>' + szs +
@@ -86,15 +120,18 @@
     return G.myShell('profile', '마이 라이프 프로필', body, '사이즈·탄생 정보는 \'특별한 날\'과 신청서에 연결돼요.');
   }
   G.myPages.profile = function () { return profilePage(); };
-  G.INP.pCal = function (el) { var g = $('p-sol-g'); if (g) g.hidden = el.value !== 'lunar'; };
+  G.INP.pConv = function () { var c = $('p-cal'), o = $('p-cv'), lunar = c && c.value === 'lunar'; if (!c || !o) return; var b = val('p-b'), lp = ($('p-leap') || {}).checked; o.textContent = convText(b, c.value, lp); if (lunar && DG && $('p-sol')) $('p-sol').value = G.solarOf(b, lp) || ''; };
+  G.INP.pCal = function (el) { var g = $('p-sol-g'), g2 = $('p-lp-g'); if (g) g.hidden = el.value !== 'lunar'; if (g2) g2.hidden = el.value !== 'lunar'; G.INP.pConv(); };
   G.SUB.profile = function () {
     var p = prof(), b = val('p-b'), ok = ($('p-bok') || {}).checked;
     if (b && !ok) return G.toast('탄생 정보를 저장하려면 선택 동의에 체크해 주세요.');
     if (b && b > SITE.today) return G.toast('생년월일을 다시 확인해 주세요.');
-    Object.assign(p, { clothes: val('p-c'), shoe: val('p-s'), ring: val('p-r'), color: val('p-col'), memo: val('p-m'), birth: b, cal: val('p-cal') || 'solar', solar: val('p-cal') === 'lunar' ? val('p-sol') : '', btime: val('p-t') || 'none', birthOk: !!(b && ok) });
+    var cal = val('p-cal') || 'solar', leap = cal === 'lunar' && !!($('p-leap') || {}).checked, sol = '';
+    if (cal === 'lunar' && b) { sol = DG ? G.solarOf(b, leap) : val('p-sol'); if (DG && !sol) return G.toast('음력에 없는 날짜예요. 달·일과 윤달 체크를 다시 확인해 주세요.'); }
+    Object.assign(p, { clothes: val('p-c'), shoe: val('p-s'), ring: val('p-r'), color: val('p-col'), memo: val('p-m'), birth: b, cal: cal, leap: leap, solar: sol, btime: val('p-t') || 'none', birthOk: !!(b && ok) });
     G.log('마이 라이프 프로필 저장'); done('프로필을 저장했어요.');
   };
-  G.ACT.pBirthDel = function () { var p = prof(); ['birth', 'cal', 'solar', 'btime', 'birthOk'].forEach(function (k) { delete p[k]; }); done('탄생 정보를 지웠어요.'); };
+  G.ACT.pBirthDel = function () { var p = prof(); ['birth', 'cal', 'leap', 'solar', 'btime', 'birthOk'].forEach(function (k) { delete p[k]; }); done('탄생 정보를 지웠어요.'); };
 
   /* 특별한 날: 저장한 생일로 탄생 상징 미리 채우기 */
   var oSpecial = P.special;

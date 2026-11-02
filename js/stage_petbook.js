@@ -32,6 +32,17 @@
       { id: 'E7', date: '2025-05-03', type: '성장 모습', title: '창가 자리 주인', text: '이제는 아침마다 창가에서 새를 구경하는 게 일과예요.', photos: [], weight: '4.1' },
       { id: 'E8', date: '2026-09-20', type: '일상', title: '돌봄 매니저와 친해졌어요', text: '출장 간 동안 오*진 매니저님이 와 주셨어요. 사진을 보내 주셔서 마음이 놓였어요.', photos: [], weight: '4.2' }
     ], books: [{ id: 'BK1', title: '나비의 첫 4년', sub: '2022 – 2026', from: '2022-04-01', to: '2026-10-31', mode: 'grow', theme: 'garnet', layout: 1, chart: true, toc: true, cover: '', st: '정리 중', at: '2026-10-28' }] } };
+    /* 시연 계정(u1)에도 예시 반려동물 · 기록 · 책을 한 번만 넣어 둔다 */
+    if (t.pets && !t.pets.u1 && !t.petbook.PET2) {
+      t.pets.u1 = [{ id: 'PET2', name: '보리', type: '강아지', breed: '말티즈', age: '3살', weight: '4.6', neck: '', chest: '', back: '', care: '천둥소리를 무서워해요.', birth: '2023-03-05', birthGuess: false, home: '2023-05-20' }];
+      t.petbook.PET2 = { entries: [
+        { id: 'E1', date: '2023-03-05', type: '태어난 날', title: '보리가 태어났어요', text: '다섯 남매 중 막내로 태어났어요.', photos: [], weight: '' },
+        { id: 'E2', date: '2023-05-20', type: '집에 온 날', title: '우리 집에 온 날', text: '처음 현관을 들어서며 꼬리를 힘껏 흔들었어요.', photos: [], weight: '1.2' },
+        { id: 'E3', date: '2023-06-03', type: '첫 산책', title: '첫 산책', text: '풀냄새에 놀라 한참을 서 있다가 용기를 냈어요.', photos: [], weight: '1.8' },
+        { id: 'E4', date: '2024-03-05', type: '생일', title: '첫 번째 생일', text: '가족이 모여 노래를 불러 줬어요.', photos: [], weight: '4.1' },
+        { id: 'E5', date: '2026-03-05', type: '생일', title: '세 번째 생일', text: '이제는 의젓한 형아가 되었어요.', photos: [], weight: '4.6' }
+      ], books: [] };
+    }
     var pp = t.petProducts; if (pp && !byId(pp, 'PC06')) pp.push({ id: 'PC06', kind: '주문제작', cat: '기념·메모리얼', name: '성장 기록책 인쇄·제본', pets: (t.petTypes || ['강아지', '고양이']).slice(), price: 25000, priceNote: '부터 · 페이지 수·표지에 따라 확정', opts: [{ n: '표지', v: ['소프트커버', '하드커버'] }, { n: '크기', v: ['A5', 'B5'] }], req: ['책 제목', '페이지 수'], lead: '확정 후 7일', stock: 0, partner: 'P3', active: true, desc: '성장 기록책을 종이책으로 인쇄·제본해 보내 드려요. 마이페이지 \'성장 기록책\'에서 바로 주문할 수 있어요.', notice: '사진 해상도가 낮으면 인쇄 전에 알려 드려요.' });
   }
   ensure();
@@ -83,7 +94,7 @@
       fg('pb-tx', '이야기', '<textarea id="pb-tx" rows="4" placeholder="그날의 모습, 했던 말, 기억하고 싶은 것을 적어요.">' + esc(e.text || '') + '</textarea>', 'full') +
       fg('pb-ph', '사진 (최대 4장)', '<input id="pb-ph" type="file" accept="image/*" multiple data-on="change:pbPhoto"><p class="hint-s" id="pb-phn">' + ((e.photos || []).length ? '지금 ' + e.photos.length + '장 · 새로 고르면 바뀌어요' : '휴대폰 사진은 자동으로 줄여서 저장해요.') + '</p>', 'full') +
       '</div><div class="fa"><button class="btn btn-fill" type="submit">' + (editing ? '고친 내용 저장' : '기록 저장') + '</button>' + (editing ? '<button class="btn btn-ghost" type="button" data-act="pbEdit" data-id="">취소</button>' : '') + '</div></form>';
-    var books = b.books.map(function (k) { var n = pages(pet, b, k).length; return '<li><div><b>' + esc(k.title) + '</b> <span class="bd bd-' + (k.st === '완성' ? 'ok' : 'warn') + '">' + esc(k.st) + '</span><small>' + (k.mode === 'memorial' ? '추억 완성본' : '성장 기록') + ' · ' + dot(k.from) + ' ~ ' + dot(k.to) + ' · ' + n + '쪽 · ' + THEMES[k.theme][0] + '</small></div><div class="fa"><a class="btn btn-line btn-sm" href="#petbook-' + pet.id + '-' + k.id + '">미리보기·인쇄</a><button class="btn btn-ghost btn-sm" data-act="pbDown" data-pet="' + pet.id + '" data-id="' + k.id + '">다운로드</button>' + (k.st !== '완성' ? '<button class="btn btn-ghost btn-sm" data-act="pbDone" data-pet="' + pet.id + '" data-id="' + k.id + '">완성하기</button>' : '') + (f('petShop') ? '<button class="btn btn-ghost btn-sm" data-act="pbOrder" data-pet="' + pet.id + '" data-id="' + k.id + '">제본 주문</button>' : '') + '<button class="btn btn-ghost btn-sm" data-act="pbBookDel" data-pet="' + pet.id + '" data-id="' + k.id + '">지우기</button></div></li>'; }).join('');
+    var books = b.books.map(function (k) { var n = pages(pet, b, k).length; return '<li><div><b>' + esc(k.title) + '</b> <span class="bd bd-' + (k.st === '완성' ? 'ok' : 'warn') + '">' + esc(k.st) + '</span><small>' + (k.mode === 'memorial' ? '추억 완성본' : '성장 기록') + ' · ' + dot(k.from) + ' ~ ' + dot(k.to) + ' · ' + n + '쪽 · ' + THEMES[k.theme][0] + '</small></div><div class="fa"><a class="btn btn-line btn-sm" href="#petbook-' + pet.id + '-' + k.id + '">미리보기·인쇄</a><button class="btn btn-line btn-sm" data-act="pbPdf" data-pet="' + pet.id + '" data-id="' + k.id + '">PDF 받기</button><button class="btn btn-ghost btn-sm" data-act="pbDown" data-pet="' + pet.id + '" data-id="' + k.id + '">웹 파일</button>' + (k.st !== '완성' ? '<button class="btn btn-ghost btn-sm" data-act="pbDone" data-pet="' + pet.id + '" data-id="' + k.id + '">완성하기</button>' : '') + (f('petShop') ? '<button class="btn btn-ghost btn-sm" data-act="pbOrder" data-pet="' + pet.id + '" data-id="' + k.id + '">제본 주문</button>' : '') + '<button class="btn btn-ghost btn-sm" data-act="pbBookDel" data-pet="' + pet.id + '" data-id="' + k.id + '">지우기</button></div></li>'; }).join('');
     var yrs = Object.keys(years);
     var make = '<form class="card form" data-sub="pbBook" data-pet="' + pet.id + '" novalidate><h3>' + ico('file', 18) + ' 책 만들기</h3><div class="fgrid">' +
       fg('bk-r', '기간', sel('bk-r', [['all', '처음부터 지금까지']].concat(yrs.map(function (y) { return ['y' + y, y + '년']; })).concat([['custom', '직접 고르기']]), 'all', ' data-on="change:bkRange"')) +
@@ -164,9 +175,68 @@
     var a = String(arg || '').split('-'), pet = myPet(a[0]), b = pet ? pb(pet.id) : null, k = b ? byId(b.books, a[1]) : null;
     if (!S.user || !f('petBook') || !k) return { title: '성장 기록책', html: G.pageHead('성장 기록책', '책을 찾을 수 없어요.', [['성장 기록책']]) + '<section class="sec sec-tight"><div class="wrap">' + G.empty('마이페이지에서 다시 열어 주세요.', '<a class="btn btn-line btn-sm" href="#my-petbook">성장 기록책으로</a>') + '</div></section>' };
     var pg = pages(pet, b, k);
-    return { title: k.title, layout: 'bare', html: '<style>' + BOOK_CSS + '</style><div class="bk-bar"><a class="btn btn-ghost btn-sm" href="#my-petbook-' + pet.id + '">' + ico('arrow-left', 16) + ' 돌아가기</a><b>' + esc(k.title) + '</b><span class="small">' + pg.length + '쪽 · ' + esc(k.st) + '</span><button class="btn btn-fill btn-sm" data-act="pbPrint">' + ico('file', 16) + ' 인쇄 · PDF로 저장</button><button class="btn btn-line btn-sm" data-act="pbDown" data-pet="' + pet.id + '" data-id="' + k.id + '">' + ico('upload', 16) + ' 파일로 다운로드</button>' + (f('petShop') ? '<button class="btn btn-line btn-sm" data-act="pbOrder" data-pet="' + pet.id + '" data-id="' + k.id + '">종이책 제본 주문</button>' : '') + '</div><div class="bk">' + pg.join('') + '</div>' + G.dockHtml() + '<div class="toast" id="toast" role="status" aria-live="polite"></div>' };
+    return { title: k.title, layout: 'bare', html: '<style>' + BOOK_CSS + '</style><div class="bk-bar"><a class="btn btn-ghost btn-sm" href="#my-petbook-' + pet.id + '">' + ico('arrow-left', 16) + ' 돌아가기</a><b>' + esc(k.title) + '</b><span class="small">' + pg.length + '쪽 · ' + esc(k.st) + '</span><button class="btn btn-fill btn-sm" data-act="pbPdf" data-pet="' + pet.id + '" data-id="' + k.id + '">' + ico('file', 16) + ' PDF 파일 받기</button><button class="btn btn-line btn-sm" data-act="pbPrint">' + ico('file', 16) + ' 인쇄하기</button><button class="btn btn-line btn-sm" data-act="pbDown" data-pet="' + pet.id + '" data-id="' + k.id + '">' + ico('upload', 16) + ' 웹 파일(HTML)</button>' + (f('petShop') ? '<button class="btn btn-line btn-sm" data-act="pbOrder" data-pet="' + pet.id + '" data-id="' + k.id + '">종이책 제본 주문</button>' : '') + '</div><div class="bk">' + pg.join('') + '</div>' + G.dockHtml() + '<div class="toast" id="toast" role="status" aria-live="polite"></div>' };
   };
-  G.ACT.pbPrint = function () { G.toast('인쇄 창에서 \'PDF로 저장\'을 고르면 PDF 파일로 받을 수 있어요.'); setTimeout(function () { try { window.print(); } catch (e) { G.toast('이 화면에서는 인쇄 창을 열 수 없어요. 파일로 다운로드해 열어 주세요.'); } }, 300); };
+
+  /* ---------- PDF 파일 만들기 (외부 도구 없이 쪽마다 그림으로 만들어 PDF로 묶어요) ---------- */
+  var enc = new TextEncoder();
+  function pdfFile(jp, title) {
+    var W = 419.53, H = 595.28, parts = [], offs = [], len = 0, N = jp.length;
+    var push = function (x) { var b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+    var obj = function (n, body) { offs[n] = len; push(n + ' 0 obj\n'); push(body); push('\nendobj\n'); };
+    var hex = ''; for (var i = 0; i < title.length; i++) hex += ('0000' + title.charCodeAt(i).toString(16)).slice(-4);
+    var info = 3 + N * 3, kids = []; for (i = 0; i < N; i++) kids.push((3 + i * 3) + ' 0 R');
+    push('%PDF-1.4\n');
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2, '<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + N + ' >>');
+    jp.forEach(function (j, i) {
+      var pg = 3 + i * 3, ct = pg + 1, im = pg + 2, cs = 'q ' + W + ' 0 0 ' + H + ' 0 0 cm /Im0 Do Q';
+      obj(pg, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Resources << /XObject << /Im0 ' + im + ' 0 R >> >> /Contents ' + ct + ' 0 R >>');
+      obj(ct, '<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream');
+      offs[im] = len; push(im + ' 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + j.w + ' /Height ' + j.h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + j.data.length + ' >>\nstream\n'); push(j.data); push('\nendstream\nendobj\n');
+    });
+    obj(info, '<< /Title <FEFF' + hex + '> /Producer (THE GARNET) >>');
+    var xr = len, total = info + 1;
+    push('xref\n0 ' + total + '\n0000000000 65535 f \n');
+    for (i = 1; i < total; i++) push(('0000000000' + offs[i]).slice(-10) + ' 00000 n \n');
+    push('trailer\n<< /Size ' + total + ' /Root 1 0 R /Info ' + info + ' 0 R >>\nstartxref\n' + xr + '\n%%EOF');
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+  function pageToJpeg(pageHtml, scale) {
+    return new Promise(function (ok, no) {
+      var box = document.createElement('div'); box.innerHTML = '<div class="bk">' + pageHtml + '</div>';
+      var xml = new XMLSerializer().serializeToString(box.firstChild);
+      var css = BOOK_CSS.replace(/]]>/g, '') + '.bk{display:block!important;padding:0!important;gap:0!important;background:#fff!important}.bk-page{box-shadow:none!important;width:148mm!important;height:210mm!important;min-height:0!important;aspect-ratio:auto!important;padding:16mm 14mm!important;overflow:hidden!important;margin:0!important}';
+      var w = 560, h = 794, svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '"><style><![CDATA[' + css + ']]></style><foreignObject x="0" y="0" width="' + w + '" height="' + h + '">' + xml + '</foreignObject></svg>';
+      var im = new Image(); im.onerror = function () { no(new Error('page image')); };
+      im.onload = function () {
+        try {
+          var c = document.createElement('canvas'); c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+          var cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height); cx.drawImage(im, 0, 0, c.width, c.height);
+          c.toBlob(function (bl) { if (!bl) return no(new Error('blob')); bl.arrayBuffer().then(function (ab) { ok({ data: new Uint8Array(ab), w: c.width, h: c.height }); }, no); }, 'image/jpeg', 0.9);
+        } catch (e) { no(e); }
+      };
+      im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
+  var pdfBusy = false;
+  G.ACT.pbPdf = function (el) {
+    if (pdfBusy) return G.toast('PDF를 만드는 중이에요. 잠시만 기다려 주세요.');
+    var pet = myPet(el.dataset.pet), b = pb(pet.id), k = byId(b.books, el.dataset.id), pg = pages(pet, b, k), out = [], i = 0;
+    pdfBusy = true; G.toast('PDF를 만들고 있어요. 쪽이 많으면 조금 걸려요. (총 ' + pg.length + '쪽)');
+    (function next() {
+      if (i >= pg.length) {
+        try {
+          var bl = pdfFile(out, k.title), a = document.createElement('a'); a.href = URL.createObjectURL(bl); a.download = (pet.name + '_' + k.title).replace(/[\\/:*?"<>|]/g, '') + '.pdf'; document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+          G.toast('PDF 파일을 내려받았어요. (' + pg.length + '쪽 · A5)'); G.log('성장 기록책 PDF 저장: ' + k.id); G.save();
+        } catch (e) { G.toast('PDF를 저장하지 못했어요. \'인쇄하기\'에서 PDF로 저장을 골라 주세요.'); }
+        pdfBusy = false; return;
+      }
+      pageToJpeg(pg[i], 3).then(function (j) { out.push(j); i++; setTimeout(next, 0); }, function () { pdfBusy = false; G.toast('이 브라우저에서는 PDF를 만들 수 없어요. \'인쇄하기\'에서 PDF로 저장을 골라 주세요.'); });
+    })();
+  };
+  G.ACT.pbPrint = function () { G.toast('인쇄 창을 열어요. 용지는 A5예요.'); setTimeout(function () { try { window.print(); } catch (e) { G.toast('이 화면에서는 인쇄 창을 열 수 없어요. \'PDF 파일 받기\'를 눌러 주세요.'); } }, 300); };
   G.ACT.pbDown = function (el) {
     var pet = myPet(el.dataset.pet), b = pb(pet.id), k = byId(b.books, el.dataset.id), pg = pages(pet, b, k);
     var html = '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(k.title) + '</title><style>body{margin:0}.ic{display:inline-block}' + BOOK_CSS + '</style></head><body><div class="bk">' + pg.join('') + '</div><p style="text-align:center;font:13px sans-serif;color:#8a7f75;padding:16px">인쇄하려면 Ctrl+P (맥은 ⌘+P) · A5 용지</p></body></html>';
@@ -242,4 +312,16 @@
     }
     return o;
   };
+
+  /* ---------- 기본 상태: 모든 단계 스위치 ON · 모든 서비스 예약 가능 (한 번만 적용, 이후 관리자가 끈 것은 유지) ---------- */
+  function allOn() {
+    if (!S.st || S.st.allOnV === 1) return;
+    G.STAGES.forEach(function (st) { st.items.forEach(function (i) { S.st.flags[i[0]] = true; }); });
+    Object.keys(S.flags || {}).forEach(function (k) { S.flags[k].state = 'BOOKABLE'; });
+    S.st.allOnV = 1;
+    if (G.stageApply) G.stageApply();
+    G.save();
+  }
+  var oReset2 = G.reset; G.reset = function () { oReset2(); allOn(); };
+  allOn();
 })();

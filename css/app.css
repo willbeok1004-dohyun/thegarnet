@@ -708,3 +708,7 @@ input.ro{background:var(--sand)!important;color:var(--muted)}
 .pb-d{display:flex;gap:8px;align-items:center}.pb-d b{font-weight:500}.pb-c h4{font-weight:500;font-size:15px}.pb-c h4 small{color:var(--muted);font-weight:400}.pb-c p{font-size:14px;color:var(--muted)}.pb-ph{display:flex;gap:6px;flex-wrap:wrap}.pb-ph img{width:84px;height:84px;object-fit:cover;border-radius:8px}
 .bk-chart{width:100%;height:auto}.pb-q{margin-bottom:10px;display:flex;gap:6px}
 .bk-bar{position:sticky;top:0;z-index:20;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 20px;background:var(--white);border-bottom:1px solid var(--line)}.bk-bar b{font-family:var(--serif);font-weight:400;margin-right:auto}
+
+/* 음력·양력 자동 변환 안내 */
+.pf-cv{margin:10px 0 14px;padding:10px 14px;border-radius:12px;background:var(--garnet-soft,#f3e6e8);color:var(--garnet,#6b3242);font-size:15px;font-weight:600;line-height:1.6}.pf-cv:empty{display:none}
+#p-sol[readonly]{background:#f4efe9;color:#5a4f47}
