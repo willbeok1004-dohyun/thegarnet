@@ -17,6 +17,24 @@
       it = [lnk('전체 글 보기', '#club')];
       if (f('pumon')) Object.keys(G.PUMON || {}).forEach(function (k) { it.push(lnk(G.PUMON[k].name, '#club', ' data-act="navClub" data-v="' + k + '"')); });
       ft = [lnk('글쓰기', '#club-new'), lnk('내 활동', '#club-mine'), lnk('이용 기준', '#club-rules')];
+    } else if (key === 'share') {
+      it = [lnk('나눔 허브 보기', '#share'), lnk('이웃 글 전체 보기', '#club')];
+      if (f('pumon')) Object.keys(G.PUMON || {}).forEach(function (k) { it.push(lnk(G.PUMON[k].name, '#club', ' data-act="navClub" data-v="' + k + '"')); });
+      ft = [lnk('글쓰기', '#club-new'), lnk('내 활동', '#club-mine'), lnk('이용 기준', '#club-rules')];
+    } else if (key === 'life') {
+      wide = true; it = [lnk('생활 서비스 허브', '#life')];
+      (G.areaOf ? ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10', 'S12', 'S13'] : []).forEach(function (k) { var s = G.sv(k); if (s && S.flags[k] && S.flags[k].state !== 'HIDDEN') it.push(lnk(s.name, '#svc-' + k)); });
+      ft = [lnk('특별한 날', '#special'), lnk('나에게 맞는 돌봄 찾기', '#find'), lnk('상담 메모 만들기', '#memo')];
+      if (f('petShop')) ft.splice(1, 0, lnk('반려동물 물품', '#petshop'));
+    } else if (key === 'nature') {
+      it = [lnk('자연 허브', '#nature'), lnk('명상·산책·마음휴식', '#svc-S11'), lnk('숙박·관광·계절여행', '#svc-S14')];
+      ft = [lnk('상담 메모 남기기', '#memo')];
+    } else if (key === 'hope') {
+      it = [lnk('후원 허브', '#hope'), lnk('후원 사업 보기', '#giving'), lnk('더가넷 나눔', '#giving-thegarnet'), lnk('마음품 연결', '#giving-maeum')];
+      if (f('campaign')) it.push(lnk('공동 캠페인', '#giving-campaign'));
+      if (f('givingNominate')) it.push(lnk('나눔 추천·신청', '#giving-nominate'));
+      if (f('givingReport')) it.push(lnk('나눔 보고서', '#giving-report'));
+      if (u) ft = [lnk('나의 나눔', '#my-giving')];
     } else if (key === 'town') {
       [['places', '거점 찾기', 'places'], ['events', '모임·이벤트', 'events'], ['news', '동네 소식', 'news'], ['groupbuy', '공동구매', 'groupbuy'], ['preorder', '창립회원 사전 신청', 'preorder']].forEach(function (x) { if (f(x[2])) it.push(lnk(x[1], '#' + x[0])); });
     } else if (key === 'guide') {
