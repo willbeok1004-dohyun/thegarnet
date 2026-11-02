@@ -758,3 +758,13 @@ a.v2-lk:hover,a.v2-lk:focus-visible{border-color:var(--garnet,#6b3242);box-shado
 @media (max-width:900px){.v2-areas .v2-ar{grid-template-columns:repeat(2,minmax(0,1fr))}.v2-info,.v2-flow,.v2-t3{grid-template-columns:1fr}}
 @media (max-width:520px){.v2-areas .v2-ar{grid-template-columns:1fr}.v2-four .btn{flex:1 1 44%}}
 body.big-text .v2-box p,body.big-text .v2-ul,body.big-text .v2-state{font-size:17px}
+.v2-su-e{margin:10px 0;padding:12px 14px;border-radius:12px;background:#fbeef0;border:1px solid #e3c8cd;color:#8a2d3b;font-size:15px;font-weight:600}
+
+/* 좁은 화면(휴대폰)에서 옆으로 넘치지 않게 */
+@media (max-width:700px){
+  .card{max-width:100%;overflow-x:auto}
+  .tabs{flex-wrap:wrap;gap:6px 14px}
+  .sd-in>*{min-width:0}.sd-in .meta,.sd-in h1,.sd-in .blk{overflow-wrap:anywhere}
+  .mp-nav{max-width:100%;overflow-x:auto}
+  .mp>*{min-width:0;max-width:100%}
+}

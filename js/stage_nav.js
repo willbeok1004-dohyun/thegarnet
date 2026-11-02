@@ -14,11 +14,11 @@
       it = [lnk('특별한 날 시작하기', '#special'), lnk('탄생상징 주얼리', '#svc-S13'), lnk('꽃·디퓨저', '#svc-S05'), lnk('맞춤 의류·신발', '#svc-S07'), lnk('수공예·포토북', '#svc-S08'), lnk('침구·소품', '#svc-S09')];
       ft = [lnk('내 사이즈·탄생 정보 입력', u ? '#my-profile' : '#login')];
     } else if (key === 'club') {
-      it = [lnk('전체 글 보기', '#club')];
+      it = [lnk('전체 글 보기', '#club', ' data-act="navClub" data-v=""')];
       if (f('pumon')) Object.keys(G.PUMON || {}).forEach(function (k) { it.push(lnk(G.PUMON[k].name, '#club', ' data-act="navClub" data-v="' + k + '"')); });
       ft = [lnk('글쓰기', '#club-new'), lnk('내 활동', '#club-mine'), lnk('이용 기준', '#club-rules')];
     } else if (key === 'share') {
-      it = [lnk('나눔 허브 보기', '#share'), lnk('이웃 글 전체 보기', '#club')];
+      it = [lnk('나눔 허브 보기', '#share'), lnk('이웃 글 전체 보기', '#club', ' data-act="navClub" data-v=""')];
       if (f('pumon')) Object.keys(G.PUMON || {}).forEach(function (k) { it.push(lnk(G.PUMON[k].name, '#club', ' data-act="navClub" data-v="' + k + '"')); });
       ft = [lnk('글쓰기', '#club-new'), lnk('내 활동', '#club-mine'), lnk('이용 기준', '#club-rules')];
     } else if (key === 'life') {
@@ -78,7 +78,7 @@
   /* 품온 4개 서비스 중 하나를 골라 바로 이동 */
   G.ACT.navClub = function (el, e) {
     if (e && e.preventDefault) e.preventDefault();
-    if (G.ACT.pmSvc) G.ACT.pmSvc({ dataset: { v: el.dataset.v } });
+    if (G.ACT.pmSvc) G.ACT.pmSvc({ dataset: { v: el.dataset.v || '' } });
     G.go('club');
   };
 

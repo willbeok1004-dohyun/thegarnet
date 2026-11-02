@@ -99,7 +99,7 @@
     var types = boxes([['gift', '무료 나눔', '금전·물품 등 어떤 대가도 받지 않아요. 수수료도 없어요.'], ['clock', '실비 공유', '재료비·교통비처럼 실제로 든 비용만 만나서 나눠요. 수수료는 없어요.'], ['shield', '유료', '금액을 글에 분명히 적고 안전결제로만 주고받아요.']]);
     var four = pm ? '<div class="v2-boxes">' + Object.keys(sv).map(function (k) { return '<a class="v2-box v2-lk" href="#club" data-act="navClub" data-v="' + k + '">' + ico(sv[k].ico || 'star', 22) + '<div><h3>' + esc(sv[k].name) + '</h3><p>' + esc(sv[k].line) + '</p></div></a>'; }).join('') + '</div>' : '';
     var html = head('SHARE', '이웃과 나누는<br>따뜻한 연결', '솜씨와 시간, 안 쓰는 물건을 가입한 이웃끼리 나눠요. 처음이어도 괜찮아요. 안전 수칙을 먼저 알려 드릴게요.', '나눔 SHARE') +
-      sec('도움 주기 · 도움 받기', '<div class="v2-cta"><a class="btn btn-fill" href="#club">이웃 글 둘러보기</a><a class="btn btn-line" href="#club-new">나눔 글 올리기</a><a class="btn btn-line" href="#club-mine">내 활동</a></div>' +
+      sec('도움 주기 · 도움 받기', '<div class="v2-cta"><a class="btn btn-fill" href="#club" data-act="navClub" data-v="">이웃 글 둘러보기</a><a class="btn btn-line" href="#club-new">나눔 글 올리기</a><a class="btn btn-line" href="#club-mine">내 활동</a></div>' +
         '<p class="small mt">무료 회원은 60일 동안 3회까지 참여를 체험할 수 있고, 정회원은 횟수 제한 없이 이용해요. (무료 참여 범위는 최종 정책 승인 후 고정돼요.)</p>') +
       sec('무료 · 실비 · 유료, 이렇게 달라요', types, 'sec-sand') +
       (four ? sec('4가지 나눔', four, 'sec-tight', '하나를 누르면 그 나눔의 글만 모아 보여 드려요.') : '') +
@@ -303,10 +303,11 @@
   P.club = function (arg) {
     var o = oClub.apply(this, arguments); if (!f('guideV2') || !o || !o.html) return o;
     arg = String(arg || '');
+    if (arg === '' && !S.user && G.navSel) { var sb = selBanner(), k0 = o.html.indexOf('</section>'); if (sb && k0 >= 0) o.html = o.html.slice(0, k0 + 10) + '<section class="sec sec-tight"><div class="wrap">' + sb + '</div></section>' + o.html.slice(k0 + 10); }
     if (arg === '') {
       var bar = '<div class="v2-state v2-safe"><h4>안전하게 만나요</h4><p>처음 만남은 공공장소·거점에서, 연락처는 운영자 검증 뒤에 열려요. 대가를 요구하는 글은 신고해 주세요. <a href="#club-rules">이용 기준 보기</a></p></div>' +
         '<div class="v2-fl v2-clf" role="group" aria-label="더 찾기"><div><b>지역</b><select id="v2-ar" data-on="change:v2cl"><option value="">전체</option></select></div><div><b>종류</b><select id="v2-py" data-on="change:v2cl"><option value="">전체</option><option value="무료">무료 나눔</option><option value="실비">실비 공유</option><option value="유료">유료</option></select></div><div><b>만나는 방법</b><select id="v2-dl" data-on="change:v2cl"><option value="">전체</option><option value="hub">거점에 맡기기 (만나지 않아도 돼요)</option><option value="meet">직접 만나기</option></select></div></div>';
-      o.html = o.html.replace(/<(div|ul|section)([^>]*) id="pmg"/, function (m0) { return bar + m0; });
+      o.html = o.html.replace(/<(div|ul|section)([^>]*) id="pmg"/, function (m0) { return selBanner() + bar + m0; });
     } else if (arg === 'new' || arg.indexOf('edit-') === 0) {
       o.html = ins(o.html, '<form', '<div class="v2-state"><p><b>올리기 전에 확인해요</b> · 품온은 개인 간 나눔이에요. 사업자 영업이나 전문 업종은 협력업체로 신청해 주세요. 사진과 글은 운영자가 확인한 뒤 공개되고, 고치면 다시 검토되며 수정 기록이 남아요. 금지 품목과 대가 요구는 올릴 수 없어요.</p><a class="btn btn-line btn-sm" href="#club-rules">금지 항목 보기</a></div>');
     } else if (arg === 'rules') {
@@ -319,6 +320,12 @@
     }
     return o;
   };
+  var oPmSvc = G.ACT.pmSvc;
+  if (oPmSvc) G.ACT.pmSvc = function (el) { G.navSel = (el && el.dataset && el.dataset.v) || ''; return oPmSvc.apply(this, arguments); };
+  function selBanner() {
+    var k = G.navSel, sv = G.PUMON && G.PUMON[k]; if (!k || !sv) return '';
+    return '<div class="v2-state v2-sel"><span class="bd bd-info">' + esc(sv.name) + '</span><p><b>' + esc(sv.line) + '</b> · ' + esc(sv.rule) + '</p>' + (S.user ? '<a class="btn btn-line btn-sm" href="#club" data-act="navClub" data-v="">전체 글 보기</a>' : '<div class="v2-cta"><a class="btn btn-fill btn-sm" href="#login">로그인하고 ' + esc(sv.name) + ' 글 보기</a><a class="btn btn-line btn-sm" href="#signup">회원가입</a><a class="btn btn-ghost btn-sm" href="#club" data-act="navClub" data-v="">전체 안내 보기</a></div>') + '</div>';
+  }
   function clApply() {
     var ar = ($('v2-ar') || {}).value, py = ($('v2-py') || {}).value, dl = ($('v2-dl') || {}).value, n = 0;
     document.querySelectorAll('#pmg .nb').forEach(function (a) {
@@ -369,6 +376,25 @@
     return o;
   };
 
+
+  var val0 = function (id) { var e = $(id); return e ? String(e.value || '') : ''; };
+  var pwHash = function (x) { var h = 2166136261; for (var i = 0; i < x.length; i++) { h ^= x.charCodeAt(i); h = Math.imul(h, 16777619); } return 'h' + (h >>> 0).toString(36) + x.length; };
+  /* ---------- 가입 안내가 사라지지 않게: 작은 알림 대신 버튼 위에 남겨요 ---------- */
+  var oSu = G.SUB.signup;
+  if (oSu) G.SUB.signup = function (fm) {
+    var t = $('toast'); if (t) t.textContent = ''; var before = S.user, pw0 = val0('s-pw');
+    var r = oSu.apply(this, arguments);
+    if (S.user && S.user !== before && S.joined && S.user === S.joined && pw0) { S.joined.pwh = pwHash(pw0); G.save(); }
+    if (f('guideV2') && S.user === before && fm && fm.querySelector) {
+      var msg = t && t.textContent;
+      if (msg) {
+        var e = $('v2-su-e'); if (!e) { e = document.createElement('p'); e.id = 'v2-su-e'; e.className = 'err v2-su-e'; e.setAttribute('role', 'alert'); var b = fm.querySelector('button[type=submit]'); if (b && b.parentNode) b.parentNode.insertBefore(e, b); }
+        e.hidden = false; e.textContent = msg; if (e.scrollIntoView) e.scrollIntoView({ block: 'center' });
+      } else { var e0 = $('v2-su-e'); if (e0) e0.hidden = true; }
+    }
+    return r;
+  };
+
   /* ---------- 시연 도구·데모 계정 숨기기 ---------- */
   var demoOn = function () { try { if (/[?&]demo=0/.test(location.search)) localStorage.removeItem('garnet.demo'); if (/[?&]demo=1/.test(location.search)) localStorage.setItem('garnet.demo', '1'); return localStorage.getItem('garnet.demo') === '1'; } catch (e) { return /[?&]demo=1/.test(location.search); } };
   G.demoMode = demoOn;
@@ -382,7 +408,10 @@
     return o;
   };
   var oSl = G.SUB.login;
-  G.SUB.login = function () { var r = oSl.apply(this, arguments); if (hide()) { var e = $('l-e'); if (e && !e.hidden) e.textContent = e.textContent.replace(/데모 비밀번호는[^.]*\.?/, '').replace('데모 계정으로 입장하거나 ', '').trim() || '이메일 또는 비밀번호가 맞지 않아요.'; } return r; };
+  G.SUB.login = function () {
+    var id0 = val0('l-id').trim(), pw1 = val0('l-pw');
+    if (id0 && pw1 && S.joined && S.joined.email === id0 && S.joined.pwh && S.joined.pwh !== pwHash(pw1)) { var e1 = $('l-e'); if (e1) { e1.textContent = '이메일 또는 비밀번호가 맞지 않아요.'; e1.hidden = false; } return; }
+    var r = oSl.apply(this, arguments); if (hide()) { var e = $('l-e'); if (e && !e.hidden) e.textContent = e.textContent.replace(/데모 비밀번호는[^.]*\.?/, '').replace('데모 계정으로 입장하거나 ', '').trim() || '이메일 또는 비밀번호가 맞지 않아요.'; } return r; };
   var oAdminP = P.admin;
   P.admin = function (arg) {
     var o = oAdminP.apply(this, arguments);
