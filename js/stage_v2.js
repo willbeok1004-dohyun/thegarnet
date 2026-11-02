@@ -152,9 +152,16 @@
   var oHome = P.home;
   P.home = function () {
     var o = oHome.apply(this, arguments); if (!f('areas') || !o || !o.html) return o;
-    var cta = '<div class="hero-cta v2-four">' + AREAS.map(function (a, i) { return '<a class="btn ' + (i === 1 ? 'btn-fill' : 'btn-line') + '" href="' + a.to + '">' + esc(a.cta) + '</a>'; }).join('') + '</div><p class="small v2-cta-n">하고 싶은 것을 하나 골라 보세요. 천천히 정해도 괜찮아요.</p>';
-    o.html = o.html.replace(/<div class="hero-cta">[\s\S]*?<\/div>/, cta);
-    var band = '<section class="sec sec-tight v2-areas"><div class="wrap"><div class="v2-ar">' + AREAS.map(function (a) { return '<a class="v2-ac" href="' + a.to + '">' + ico(a.ic, 26) + '<small>' + a.en + '</small><h3>' + a.ko + '</h3><p>' + esc(a.line) + '</p><span>' + esc(a.sub) + '</span></a>'; }).join('') + '</div>' +
+    /* 첫 화면(히어로) 안에 환영 카드: 제목 · 문구 · 4가지 선택 */
+    var tiles = [['life', '도움이 필요해요', '나눔·생활 지원', 'home'], ['share', '마음을 나누고 싶어요', '재능·시간·물품', 'swap'], ['nature', '잠시 쉬고 싶어요', '자연·산책·휴식', 'leaf'], ['hope', '희망을 전하고 싶어요', '후원·지원·참여', 'heart']];
+    var card = '<section class="v2-wc v2-wc-hero" id="welcome" aria-labelledby="wc-t"><h2 id="wc-t">누군가의 온기가,<br>다시 시작할 용기가 됩니다.</h2>' +
+      '<p>혼자 감당하기 어려운 날에도, 누군가에게 작은 힘이 되고 싶은 날에도 <b>더가넷</b>은 여러분을 환영합니다.</p>' +
+      '<p>마음을 나누고, 필요한 도움을 찾고, 자연 속에서 쉬며, 함께 살아가는 따뜻한 일상을 만들어갑니다.</p>' +
+      '<ul class="v2-wc-g" aria-label="지금 어떤 마음이세요?">' + tiles.map(function (t) { return '<li><a class="v2-wt" href="#' + t[0] + '"><span class="v2-wt-i">' + ico(t[3], 22) + '</span><strong>' + t[1] + '</strong><small>' + t[2] + '</small></a></li>'; }).join('') + '</ul></section>';
+    o.html = o.html.replace('<section class="hero"', '<section class="hero v2-hero"');
+    if (/<p class="hero-p">[\s\S]*?<\/ul>/.test(o.html)) o.html = o.html.replace(/<p class="hero-p">[\s\S]*?<\/ul>/, card);
+    else o.html = o.html.replace(/<div class="hero-cta">[\s\S]*?<\/div>/, card);
+    var band = '<section class="sec sec-tight v2-areas"><div class="wrap">' +
       '<div class="v2-info"><div><h4>무료와 유료</h4><p>나눔은 무료·실비·유료로 나뉘어요. 생활 서비스는 견적을 확인하고 승인한 뒤에 시작하고, 승인 전에는 비용이 청구되지 않아요.</p></div>' +
       '<div><h4>시범 운영</h4><p>' + esc(pilot()) + ' 동네에서 시범으로 시작해요. 실제 제공 가능 여부는 서비스마다 확인 후 안내해요.</p></div>' +
       '<div><h4>쉽게 쓰기</h4><p><button class="lnk-u" data-act="bigText">글자 크게 보기</button> · 전화로 신청 ' + esc(SITE.phone) + ' · 키보드로도 모두 이동할 수 있어요.</p></div></div></div></section>';
